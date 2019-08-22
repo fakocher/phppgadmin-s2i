@@ -235,7 +235,8 @@
 					'href' => array (
 						'url' => 'views.php',
 						'urlvars' => array_merge($fields, array (
-							'action' => 'create'
+							'action' => 'create',
+							'formDefinition' => $_SESSION['sqlquery']
 						))
 					)
 				),
@@ -250,7 +251,9 @@
 			'attr'=> array (
 				'href' => array (
 					'url' => 'dataexport.php',
-					'urlvars' => $fields
+					'urlvars' => array_merge($fields, array(
+						'query' => $_SESSION['sqlquery']
+					))
 				)
 			),
 			'content' => $lang['strdownload']

@@ -23,7 +23,7 @@
 	function doSignal() {
 		global $data, $lang;
 
-		$status = $data->sendSignal($_REQUEST['pid'], $_REQUEST['signal']);
+		$status = $data->sendSignal($_REQUEST['procpid'], $_REQUEST['signal']);
 		if ($status == 0)
 			doProcesses($lang['strsignalsent']);
 		else
@@ -445,10 +445,6 @@
 				'title' => $lang['strprocess'],
 				'field' => field('pid'),
 			),
-            'blocked' => array(
-                'title' => $lang['strblocked'],
-                'field' => field('waiting'),
-            ),
 			'query' => array(
 				'title' => $lang['strsql'],
 				'field' => field('query'),
@@ -463,7 +459,7 @@
 		$columns['actions'] = array('title' => $lang['stractions']);
 
 		$actions = array();
-		if ($data->hasUserSignals() || $data->isSuperUser()) {
+		if ($data->isSuperUser()) {
 			$actions = array(
 				'cancel' => array(
 					'content' => $lang['strcancel'],
@@ -473,7 +469,7 @@
 							'urlvars' => array (
 								'action' => 'signal',
 								'signal' => 'CANCEL',
-								'pid' => field('pid')
+								'procpid' => field('procpid')
 							)
 						)
 					)
@@ -486,7 +482,7 @@
 							'urlvars' => array (
 								'action' => 'signal',
 								'signal' => 'KILL',
-								'pid' => field('pid')
+								'procpid' => field('procpid')
 							)
 						)
 					)
@@ -599,9 +595,9 @@
 		}
 
 		echo "<p><input type=\"checkbox\" id=\"paginate\" name=\"paginate\"", (isset($_REQUEST['paginate']) ? ' checked="checked"' : ''), " /><label for=\"paginate\">{$lang['strpaginate']}</label></p>\n";
-		echo "<p><input type=\"submit\" name=\"execute\" accesskey=\"r\" value=\"{$lang['strexecute']}\" />\n";
+		echo "<p><input type=\"submit\" name=\"execute\" value=\"{$lang['strexecute']}\" />\n";
 		echo $misc->form;
-		echo "<input type=\"reset\" accesskey=\"q\" value=\"{$lang['strreset']}\" /></p>\n";
+		echo "<input type=\"reset\" value=\"{$lang['strreset']}\" /></p>\n";
 		echo "</form>\n";
 
 		// Default focus

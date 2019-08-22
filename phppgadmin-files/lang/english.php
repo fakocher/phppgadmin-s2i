@@ -126,7 +126,6 @@
 	$lang['strvariables'] = 'Variables';
 	$lang['strprocess'] = 'Process';
 	$lang['strprocesses'] = 'Processes';
-	$lang['strblocked'] = 'Blocked';
 	$lang['strsetting'] = 'Setting';
 	$lang['streditsql'] = 'Edit SQL';
 	$lang['strruntime'] = 'Total runtime: %s ms';

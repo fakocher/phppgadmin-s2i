@@ -10,7 +10,6 @@
 	$appThemes = array(
 		'default' => 'Default',
 		'cappuccino' => 'Cappuccino',
-		'gotar' => 'Blue/Green',
-		'bootstrap' => 'Bootstrap3'
+		'gotar' => 'Blue/Green'
 	);
 ?>

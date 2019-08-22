@@ -89,8 +89,8 @@
 						if ($_REQUEST['action'] == 'confeditrow' && $rs->fields[$attrs->fields['attname']] === null) {
 							$_REQUEST['nulls'][$attrs->fields['attname']] = 'on';
 						}
-						echo "<label><span><input type=\"checkbox\" name=\"nulls[{$attrs->fields['attname']}]\"",
-							isset($_REQUEST['nulls'][$attrs->fields['attname']]) ? ' checked="checked"' : '', " /></span></label></td>\n";
+						echo "<input type=\"checkbox\" name=\"nulls[{$attrs->fields['attname']}]\"",
+							isset($_REQUEST['nulls'][$attrs->fields['attname']]) ? ' checked="checked"' : '', " /></td>\n";
 						$elements++;
 					}
 					else
@@ -150,7 +150,7 @@
 			echo "<input type=\"hidden\" name=\"strings\" value=\"", htmlspecialchars($_REQUEST['strings']), "\" />\n";
 			echo "<input type=\"hidden\" name=\"key\" value=\"", htmlspecialchars(urlencode(serialize($key))), "\" />\n";
 			echo "<p>";
-			if (!$error) echo "<input type=\"submit\" name=\"save\" accesskey=\"r\" value=\"{$lang['strsave']}\" />\n";
+			if (!$error) echo "<input type=\"submit\" name=\"save\" value=\"{$lang['strsave']}\" />\n";
 			echo "<input type=\"submit\" name=\"cancel\" value=\"{$lang['strcancel']}\" />\n";
 
 			if($fksprops !== false) {
@@ -321,13 +321,8 @@
 				$sortLink = http_build_query($args);
 
 				echo "<th class=\"data\"><a href=\"?{$sortLink}\">"
-					, $misc->printVal($finfo->name);
-				if($_REQUEST['sortkey'] == ($j + 1)) {
-					if($_REQUEST['sortdir'] == 'asc')
-						echo '<img src="'. $misc->icon('RaiseArgument') .'" alt="asc">';
-					else	echo '<img src="'. $misc->icon('LowerArgument') .'" alt="desc">';
-				}
-				echo "</a></th>\n";
+					, $misc->printVal($finfo->name)
+					, "</a></th>\n";
 			}
 			$j++;
 		}
@@ -443,7 +438,6 @@
 		}
 
 		$misc->printTrail(isset($subject) ? $subject : 'database');
-		$misc->printTabs($subject,'browse');
 
 		/* This code is used when browsing FK in pure-xHTML (without js) */
 		if (isset($_REQUEST['fkey'])) {
@@ -462,6 +456,7 @@
 				$type = 'SELECT';
 			}
 			else {
+				$misc->printTitle($lang['strbrowse']);
 				$type = 'TABLE';
 			}
 		} else {
@@ -524,21 +519,6 @@
 
 		if ($save_history && is_object($rs) && ($type == 'QUERY')) //{
 			$misc->saveScriptHistory($_REQUEST['query']);
-
-		echo '<form method="POST" action="'.$_SERVER['REQUEST_URI'].'"><textarea width="90%" name="query" rows="5" cols="100" resizable="true">';
-		if (isset($_REQUEST['query'])) {
-			$query = $_REQUEST['query'];
-		} else {
-			$query = "SELECT * FROM {$_REQUEST['schema']}";
-			if ($_REQUEST['subject'] == 'view') {
-				$query = "{$query}.{$_REQUEST['view']};";
-			} else {
-				$query = "{$query}.{$_REQUEST['table']};";
-			}
-		}
-		//$query = isset($_REQUEST['query'])? $_REQUEST['query'] : "select * from {$_REQUEST['schema']}.{$_REQUEST['table']};";
-		echo $query;
-		echo '</textarea><br><input type="submit"/></form>';
 
 		if (is_object($rs) && $rs->recordCount() > 0) {
 			// Show page navigation
@@ -766,7 +746,7 @@
 				);
 			}
 
-			$urlvars = array();
+			$urlvars = array('query' => $_REQUEST['query']);
 			if (isset($_REQUEST['search_path']))
 				$urlvars['search_path'] = $_REQUEST['search_path'];
 
@@ -829,27 +809,9 @@
 	$scripts .= "};\n";
 	$scripts .= "</script>\n";
 
-	// Set the title based on the subject of the request 
-	if (isset($_REQUEST['subject']) && isset($_REQUEST[$_REQUEST['subject']])) {
-		if ($_REQUEST['subject'] == 'table') {
-			$misc->printHeader(
-				$lang['strtables'].': '.$_REQUEST[$_REQUEST['subject']],
-				$scripts
-			);
-		}
-		else if ($_REQUEST['subject'] == 'view') {
-			$misc->printHeader(
-				$lang['strviews'].': '.$_REQUEST[$_REQUEST['subject']],
-				$scripts
-			);
-		} 
-        else if ($_REQUEST['subject'] == 'column') {
-            $misc->printHeader(
-                $lang['strcolumn'].': '.$_REQUEST[$_REQUEST['subject']],
-                $scripts
-            );
-        }
-	}
+	// If a table is specified, then set the title differently
+	if (isset($_REQUEST['subject']) && isset($_REQUEST[$_REQUEST['subject']]))
+		$misc->printHeader($lang['strtables'], $scripts);
 	else	
 		$misc->printHeader($lang['strqueryresults']);
 

@@ -72,8 +72,8 @@
 			putenv('PGPORT=' . $port);
 		}
 
-		// Build command for executing pg_dump.
-		$cmd = $exe;
+		// Build command for executing pg_dump.  '-i' means ignore version differences.
+		$cmd = $exe . " -i";
 		
 		// we are PG 7.4+, so we always have a schema
 		if (isset($_REQUEST['schema'])) {

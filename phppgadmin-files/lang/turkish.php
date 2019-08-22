@@ -639,3 +639,4 @@ $lang['strcannotdumponwindows']  =  'Dumping of complex table and schema names o
 	$lang['strerrorloading']  =  'Yükleme hatası';
 	$lang['strclicktoreload']  =  'Yeniden yüklemek için tıklayın.';
 ?>
+

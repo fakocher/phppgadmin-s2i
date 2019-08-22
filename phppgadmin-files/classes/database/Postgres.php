@@ -11,7 +11,7 @@ include_once('./classes/database/ADODB_base.php');
 
 class Postgres extends ADODB_base {
 
-	var $major_version = 12;
+	var $major_version = 9.2;
 	// Max object name length
 	var $_maxNameLen = 63;
 	// Store the current schema
@@ -169,8 +169,9 @@ class Postgres extends ADODB_base {
 	 * Constructor
 	 * @param $conn The database connection
 	 */
-	function Postgres($conn) {
-		$this->ADODB_base($conn);
+	function __construct($conn) {
+		//$this->ADODB_base($conn);
+    parent::__construct($conn);
 	}
 
 	// Formatting functions
@@ -230,7 +231,7 @@ class Postgres extends ADODB_base {
 	 * @return Data formatted for on-screen display
 	 */
 	function escapeBytea($data) {
-		return htmlentities($data, ENT_QUOTES, 'UTF-8');
+		return $data;
 	}
 
 	/**
@@ -275,8 +276,6 @@ class Postgres extends ADODB_base {
                 }
 			case 'text':
 			case 'text[]':
-			case 'json':
-			case 'jsonb': 
 			case 'xml':
 			case 'xml[]':
 				$n = substr_count($value, "\n");
@@ -419,7 +418,7 @@ class Postgres extends ADODB_base {
 	}
 
 	function getHelpPages() {
-		include_once('./help/PostgresDoc95.php');
+		include_once('./help/PostgresDoc92.php');
 		return $this->help_page;
 	}
 
@@ -439,7 +438,7 @@ class Postgres extends ADODB_base {
 	/**
 	 * Return all database available on the server
 	 * @param $currentdatabase database name that should be on top of the resultset
-	 * 
+	 *
 	 * @return A list of databases, sorted alphabetically
 	 */
 	function getDatabases($currentdatabase = NULL) {
@@ -457,7 +456,7 @@ class Postgres extends ADODB_base {
 		if ($currentdatabase != NULL) {
 			$this->clean($currentdatabase);
 			$orderby = "ORDER BY pdb.datname = '{$currentdatabase}' DESC, pdb.datname";
-		} 
+		}
 		else
 			$orderby = "ORDER BY pdb.datname";
 
@@ -470,9 +469,9 @@ class Postgres extends ADODB_base {
 			SELECT pdb.datname AS datname, pr.rolname AS datowner, pg_encoding_to_char(encoding) AS datencoding,
 				(SELECT description FROM pg_catalog.pg_shdescription pd WHERE pdb.oid=pd.objoid AND pd.classoid='pg_database'::regclass) AS datcomment,
 				(SELECT spcname FROM pg_catalog.pg_tablespace pt WHERE pt.oid=pdb.dattablespace) AS tablespace,
-				CASE WHEN pg_catalog.has_database_privilege(current_user, pdb.oid, 'CONNECT') 
-					THEN pg_catalog.pg_database_size(pdb.oid) 
-					ELSE -1 -- set this magic value, which we will convert to no access later  
+				CASE WHEN pg_catalog.has_database_privilege(current_user, pdb.oid, 'CONNECT')
+					THEN pg_catalog.pg_database_size(pdb.oid)
+					ELSE -1 -- set this magic value, which we will convert to no access later
 				END as dbsize, pdb.datcollate, pdb.datctype
 			FROM pg_catalog.pg_database pdb
 				LEFT JOIN pg_catalog.pg_roles pr ON (pdb.datdba = pr.oid)
@@ -644,7 +643,7 @@ class Postgres extends ADODB_base {
 				return -2;
 			}
 		}
-		
+
 		$this->fieldClean($dbName);
 		$status = $this->setComment('DATABASE', $dbName, '', $comment);
 		if ($status != 0) {
@@ -1788,7 +1787,7 @@ class Postgres extends ADODB_base {
 		if (!empty($name) && ($name != $tblrs->fields['relname'])) {
 			$f_schema = $this->_schema;
 			$this->fieldClean($f_schema);
-			
+
 			$sql = "ALTER TABLE \"{$f_schema}\".\"{$tblrs->fields['relname']}\" RENAME TO \"{$name}\"";
 			$status =  $this->execute($sql);
 			if ($status == 0)
@@ -1833,7 +1832,7 @@ class Postgres extends ADODB_base {
 		if (!empty($tablespace) && ($tblrs->fields['tablespace'] != $tablespace)) {
 			$f_schema = $this->_schema;
 			$this->fieldClean($f_schema);
-			
+
 			// If tablespace has been changed, then do the alteration.  We
 			// don't want to do this unnecessarily.
 			$sql = "ALTER TABLE \"{$f_schema}\".\"{$tblrs->fields['relname']}\" SET TABLESPACE \"{$tablespace}\"";
@@ -2193,7 +2192,7 @@ class Postgres extends ADODB_base {
 			// Initialise an empty SQL string
 			$sql = "ALTER TABLE \"{$f_schema}\".\"{$table}\" "
 				. implode(',', $toAlter);
-	
+
 			$status = $this->execute($sql);
 			if ($status != 0) {
 				$this->rollbackTransaction();
@@ -2327,7 +2326,7 @@ class Postgres extends ADODB_base {
 			$this->rollbackTransaction();
 			return -1;
 		}
-		
+
 		// Set extra_float_digits to 2
 		$sql = "SET extra_float_digits TO 2";
 		$status = $this->execute($sql);
@@ -2335,7 +2334,7 @@ class Postgres extends ADODB_base {
 			$this->rollbackTransaction();
 			return -1;
 		}
-		
+
 		return 0;
 	}
 
@@ -2363,11 +2362,11 @@ class Postgres extends ADODB_base {
 
 		return $this->selectSet("SELECT {$oid_str}* FROM \"{$relation}\"");
 	}
-	
+
 	/**
 	 * Returns all available autovacuum per table information.
 	 * @param $table if given, return autovacuum info for the given table or return all informations for all table
-	 *   
+	 *
 	 * @return A recordset
 	 */
 	function getTableAutovacuum($table='') {
@@ -2410,13 +2409,13 @@ class Postgres extends ADODB_base {
 				'relname' => $_autovacs->fields['relname']
 			);
 
-			foreach (explode(',', $_autovacs->fields['reloptions']) as $var) {
+			foreach (explode(',', $_autovacs->fields['reloptions']) AS $var) {
 				list($o, $v) = explode('=', $var);
-				$_[$o] = $v; 
+				$_[$o] = $v;
 			}
 
 			$autovacs[] = $_;
-			
+
 			$_autovacs->moveNext();
 		}
 
@@ -2611,7 +2610,7 @@ class Postgres extends ADODB_base {
 				$this->rollbackTransaction();
 				return -1;
 			}
-			
+
 			if ($schema === false) $schema = $this->_schema;
 
 			$status = $this->delete($table, $key, $schema);
@@ -2639,20 +2638,14 @@ class Postgres extends ADODB_base {
 		$this->fieldClean($sequence);
 		$this->clean($c_sequence);
 
-        $sql = "
-            SELECT
-                c.relname AS seqname, s.*, 
-                m.seqstart AS start_value, m.seqincrement AS increment_by, m.seqmax AS max_value, m.seqmin AS min_value, 
-                m.seqcache AS cache_value, m.seqcycle AS is_cycled,  
-			    pg_catalog.obj_description(m.seqrelid, 'pg_class') AS seqcomment,
+		$sql = "
+			SELECT c.relname AS seqname, s.*,
+				pg_catalog.obj_description(s.tableoid, 'pg_class') AS seqcomment,
 				u.usename AS seqowner, n.nspname
-            FROM
-                \"{$sequence}\" AS s, pg_catalog.pg_sequence m,  
-                pg_catalog.pg_class c, pg_catalog.pg_user u, pg_catalog.pg_namespace n                       
-            WHERE
-                c.relowner=u.usesysid AND c.relnamespace=n.oid 
-                AND c.oid = m.seqrelid AND c.relname = '{$c_sequence}' AND c.relkind = 'S' AND n.nspname='{$c_schema}' 
-                AND n.oid = c.relnamespace"; 
+			FROM \"{$sequence}\" AS s, pg_catalog.pg_class c, pg_catalog.pg_user u, pg_catalog.pg_namespace n
+			WHERE c.relowner=u.usesysid AND c.relnamespace=n.oid
+				AND c.relname = '{$c_sequence}' AND c.relkind = 'S' AND n.nspname='{$c_schema}'
+				AND n.oid = c.relnamespace";
 
 		return $this->selectSet( $sql );
 	}
@@ -3286,14 +3279,14 @@ class Postgres extends ADODB_base {
 		return $this->selectSet($sql);
 	}
 
-	/** 
+	/**
 	 * test if a table has been clustered on an index
 	 * @param $table The table to test
-	 * 
+	 *
 	 * @return true if the table has been already clustered
 	 */
 	function alreadyClustered($table) {
-		
+
 		$c_schema = $this->_schema;
 		$this->clean($c_schema);
 		$this->clean($table);
@@ -3305,15 +3298,15 @@ class Postgres extends ADODB_base {
 				AND c.relnamespace = (SELECT oid FROM pg_catalog.pg_namespace
 					WHERE nspname='{$c_schema}')
 				";
-		
+
 		$v = $this->selectSet($sql);
-		
+
 		if ($v->recordCount() == 0)
 			return false;
-			
+
 		return true;
 	}
-	
+
 	/**
 	 * Creates an index
 	 * @param $name The index name
@@ -3410,18 +3403,18 @@ class Postgres extends ADODB_base {
 	 * @return 0 success
 	 */
 	function clusterIndex($table='', $index='') {
-		
+
 		$sql = 'CLUSTER';
-		
+
 		// We don't bother with a transaction here, as there's no point rolling
 		// back an expensive cluster if a cheap analyze fails for whatever reason
-		
+
 		if (!empty($table)) {
 			$f_schema = $this->_schema;
 			$this->fieldClean($f_schema);
 			$this->fieldClean($table);
 			$sql .= " \"{$f_schema}\".\"{$table}\"";
-			
+
 			if (!empty($index)) {
 				$this->fieldClean($index);
 				$sql .= " USING \"{$index}\"";
@@ -3741,7 +3734,7 @@ class Postgres extends ADODB_base {
 	 */
 	function getLinkingKeys($tables) {
 		if (!is_array($tables)) return -1;
-		
+
 		$this->clean($tables[0]['tablename']);
 		$this->clean($tables[0]['schemaname']);
 		$tables_list = "'{$tables[0]['tablename']}'";
@@ -3893,7 +3886,7 @@ class Postgres extends ADODB_base {
 	function getDomains() {
 		$c_schema = $this->_schema;
 		$this->clean($c_schema);
-		
+
 		$sql = "
 			SELECT
 				t.typname AS domname,
@@ -4120,19 +4113,14 @@ class Postgres extends ADODB_base {
 
 		$sql = "
 			SELECT
-				pc.oid AS prooid, proname, 
-				pg_catalog.pg_get_userbyid(proowner) AS proowner,
+				pc.oid AS prooid, proname, pg_catalog.pg_get_userbyid(proowner) AS proowner,
 				nspname as proschema, lanname as prolanguage, procost, prorows,
 				pg_catalog.format_type(prorettype, NULL) as proresult, prosrc,
 				probin, proretset, proisstrict, provolatile, prosecdef,
 				pg_catalog.oidvectortypes(pc.proargtypes) AS proarguments,
 				proargnames AS proargnames,
 				pg_catalog.obj_description(pc.oid, 'pg_proc') AS procomment,
-				proconfig,
-				(select array_agg( (select typname from pg_type pt
-					where pt.oid = p.oid) ) from unnest(proallargtypes) p)
-				AS proallarguments,
-				proargmodes
+				proconfig
 			FROM
 				pg_catalog.pg_proc pc, pg_catalog.pg_language pl,
 				pg_catalog.pg_namespace pn
@@ -4297,5 +4285,3710 @@ class Postgres extends ADODB_base {
 		if ($this->hasFunctionAlterSchema()) {
 		    $this->fieldClean($newschema);
 		    /* $funcschema is escaped in createFunction */
-		    if ($funcschema != $newschema) { 
-				$sql = "ALTER FUNCTION \"{$f_schema}\".\"{$funcname}\
+		    if ($funcschema != $newschema) {
+				$sql = "ALTER FUNCTION \"{$f_schema}\".\"{$funcname}\"({$args}) SET SCHEMA \"{$newschema}\"";
+				$status = $this->execute($sql);
+				if ($status != 0) {
+					$this->rollbackTransaction();
+					return -7;
+				}
+		    }
+		}
+
+		return $this->endTransaction();
+	}
+
+	/**
+	 * Creates a new function.
+	 * @param $funcname The name of the function to create
+	 * @param $args A comma separated string of types
+	 * @param $returns The return type
+	 * @param $definition The definition for the new function
+	 * @param $language The language the function is written for
+	 * @param $flags An array of optional flags
+	 * @param $setof True if it returns a set, false otherwise
+	 * @param $rows number of rows planner should estimate will be returned
+     * @param $cost cost the planner should use in the function execution step
+     * @param $comment Comment for the function
+	 * @param $replace (optional) True if OR REPLACE, false for normal
+	 * @return 0 success
+	 * @return -3 create function failed
+	 * @return -4 set comment failed
+	 */
+	function createFunction($funcname, $args, $returns, $definition, $language, $flags, $setof, $cost, $rows, $comment, $replace = false) {
+
+		// Begin a transaction
+		$status = $this->beginTransaction();
+		if ($status != 0) {
+			$this->rollbackTransaction();
+			return -1;
+		}
+
+		$this->fieldClean($funcname);
+		$this->clean($args);
+		$this->fieldClean($language);
+		$this->arrayClean($flags);
+		$this->clean($cost);
+		$this->clean($rows);
+		$f_schema = $this->_schema;
+		$this->fieldClean($f_schema);
+
+		$sql = "CREATE";
+		if ($replace) $sql .= " OR REPLACE";
+		$sql .= " FUNCTION \"{$f_schema}\".\"{$funcname}\" (";
+
+		if ($args != '')
+			$sql .= $args;
+
+		// For some reason, the returns field cannot have quotes...
+		$sql .= ") RETURNS ";
+		if ($setof) $sql .= "SETOF ";
+		$sql .= "{$returns} AS ";
+
+		if (is_array($definition)) {
+			$this->arrayClean($definition);
+			$sql .= "'" . $definition[0] . "'";
+			if ($definition[1]) {
+				$sql .= ",'" . $definition[1] . "'";
+			}
+		} else {
+			$this->clean($definition);
+			$sql .= "'" . $definition . "'";
+		}
+
+		$sql .= " LANGUAGE \"{$language}\"";
+
+		// Add costs
+		if (!empty($cost))
+			$sql .= " COST {$cost}";
+
+		if ($rows <> 0 ){
+			$sql .= " ROWS {$rows}";
+		}
+
+		// Add flags
+		foreach ($flags as  $v) {
+			// Skip default flags
+			if ($v == '') continue;
+			else $sql .= "\n{$v}";
+		}
+
+		$status = $this->execute($sql);
+		if ($status != 0) {
+			$this->rollbackTransaction();
+			return -3;
+		}
+
+		/* set the comment */
+		$status = $this->setComment('FUNCTION', "\"{$funcname}\"({$args})", null, $comment);
+		if ($status != 0) {
+			$this->rollbackTransaction();
+			return -4;
+		}
+
+		return $this->endTransaction();
+	}
+
+	/**
+	 * Drops a function.
+	 * @param $function_oid The OID of the function to drop
+	 * @param $cascade True to cascade drop, false to restrict
+	 * @return 0 success
+	 */
+	function dropFunction($function_oid, $cascade) {
+		// Function comes in with $object as function OID
+		$fn = $this->getFunction($function_oid);
+		$f_schema = $this->_schema;
+		$this->fieldClean($f_schema);
+		$this->fieldClean($fn->fields['proname']);
+
+		$sql = "DROP FUNCTION \"{$f_schema}\".\"{$fn->fields['proname']}\"({$fn->fields['proarguments']})";
+		if ($cascade) $sql .= " CASCADE";
+
+		return $this->execute($sql);
+	}
+
+	// Type functions
+
+	/**
+	 * Returns all details for a particular type
+	 * @param $typname The name of the view to retrieve
+	 * @return Type info
+	 */
+	function getType($typname) {
+		$this->clean($typname);
+
+		$sql = "SELECT typtype, typbyval, typname, typinput AS typin, typoutput AS typout, typlen, typalign
+			FROM pg_type WHERE typname='{$typname}'";
+
+		return $this->selectSet($sql);
+	}
+
+	/**
+	 * Returns a list of all types in the database
+	 * @param $all If true, will find all available types, if false just those in search path
+	 * @param $tabletypes If true, will include table types
+	 * @param $domains If true, will include domains
+	 * @return A recordet
+	 */
+	function getTypes($all = false, $tabletypes = false, $domains = false) {
+		if ($all)
+			$where = '1 = 1';
+		else {
+			$c_schema = $this->_schema;
+			$this->clean($c_schema);
+			$where = "n.nspname = '{$c_schema}'";
+		}
+		// Never show system table types
+		$where2 = "AND c.relnamespace NOT IN (SELECT oid FROM pg_catalog.pg_namespace WHERE nspname LIKE 'pg@_%' ESCAPE '@')";
+
+		// Create type filter
+		$tqry = "'c'";
+		if ($tabletypes)
+			$tqry .= ", 'r', 'v'";
+
+		// Create domain filter
+		if (!$domains)
+			$where .= " AND t.typtype != 'd'";
+
+		$sql = "SELECT
+				t.typname AS basename,
+				pg_catalog.format_type(t.oid, NULL) AS typname,
+				pu.usename AS typowner,
+				t.typtype,
+				pg_catalog.obj_description(t.oid, 'pg_type') AS typcomment
+			FROM (pg_catalog.pg_type t
+				LEFT JOIN pg_catalog.pg_namespace n ON n.oid = t.typnamespace)
+				LEFT JOIN pg_catalog.pg_user pu ON t.typowner = pu.usesysid
+			WHERE (t.typrelid = 0 OR (SELECT c.relkind IN ({$tqry}) FROM pg_catalog.pg_class c WHERE c.oid = t.typrelid {$where2}))
+			AND t.typname !~ '^_'
+			AND {$where}
+			ORDER BY typname
+		";
+
+		return $this->selectSet($sql);
+	}
+
+	/**
+	 * Creates a new type
+	 * @param ...
+	 * @return 0 success
+	 */
+	function createType($typname, $typin, $typout, $typlen, $typdef,
+						$typelem, $typdelim, $typbyval, $typalign, $typstorage) {
+		$f_schema = $this->_schema;
+		$this->fieldClean($f_schema);
+		$this->fieldClean($typname);
+		$this->fieldClean($typin);
+		$this->fieldClean($typout);
+
+		$sql = "
+			CREATE TYPE \"{$f_schema}\".\"{$typname}\" (
+				INPUT = \"{$typin}\",
+				OUTPUT = \"{$typout}\",
+				INTERNALLENGTH = {$typlen}";
+		if ($typdef != '') $sql .= ", DEFAULT = {$typdef}";
+		if ($typelem != '') $sql .= ", ELEMENT = {$typelem}";
+		if ($typdelim != '') $sql .= ", DELIMITER = {$typdelim}";
+		if ($typbyval) $sql .= ", PASSEDBYVALUE, ";
+		if ($typalign != '') $sql .= ", ALIGNMENT = {$typalign}";
+		if ($typstorage != '') $sql .= ", STORAGE = {$typstorage}";
+
+		$sql .= ")";
+
+		return $this->execute($sql);
+	}
+
+	/**
+	 * Drops a type.
+	 * @param $typname The name of the type to drop
+	 * @param $cascade True to cascade drop, false to restrict
+	 * @return 0 success
+	 */
+	function dropType($typname, $cascade) {
+		$f_schema = $this->_schema;
+		$this->fieldClean($f_schema);
+		$this->fieldClean($typname);
+
+		$sql = "DROP TYPE \"{$f_schema}\".\"{$typname}\"";
+		if ($cascade) $sql .= " CASCADE";
+
+		return $this->execute($sql);
+	}
+
+	/**
+	 * Creates a new enum type in the database
+	 * @param $name The name of the type
+	 * @param $values An array of values
+	 * @param $typcomment Type comment
+	 * @return 0 success
+	 * @return -1 transaction error
+	 * @return -2 no values supplied
+	 */
+	function createEnumType($name, $values, $typcomment) {
+		$f_schema = $this->_schema;
+		$this->fieldClean($f_schema);
+		$this->fieldClean($name);
+
+		if (empty($values)) return -2;
+
+		$status = $this->beginTransaction();
+		if ($status != 0) return -1;
+
+		$values = array_unique($values);
+
+		$nbval = count($values);
+
+		for ($i = 0; $i < $nbval; $i++)
+			$this->clean($values[$i]);
+
+		$sql = "CREATE TYPE \"{$f_schema}\".\"{$name}\" AS ENUM ('";
+		$sql.= implode("','", $values);
+		$sql .= "')";
+
+		$status = $this->execute($sql);
+		if ($status) {
+			$this->rollbackTransaction();
+			return -1;
+		}
+
+		if ($typcomment != '') {
+			$status = $this->setComment('TYPE', $name, '', $typcomment, true);
+			if ($status) {
+				$this->rollbackTransaction();
+				return -1;
+			}
+		}
+
+		return $this->endTransaction();
+
+	}
+
+	/**
+	 * Get defined values for a given enum
+	 * @return A recordset
+	 */
+	function getEnumValues($name) {
+		$this->clean($name);
+
+		$sql = "SELECT enumlabel AS enumval
+		FROM pg_catalog.pg_type t JOIN pg_catalog.pg_enum e ON (t.oid=e.enumtypid)
+		WHERE t.typname = '{$name}' ORDER BY e.oid";
+		return $this->selectSet($sql);
+	}
+
+	/**
+	 * Creates a new composite type in the database
+	 * @param $name The name of the type
+	 * @param $fields The number of fields
+	 * @param $field An array of field names
+	 * @param $type An array of field types
+	 * @param $array An array of '' or '[]' for each type if it's an array or not
+	 * @param $length An array of field lengths
+	 * @param $colcomment An array of comments
+	 * @param $typcomment Type comment
+	 * @return 0 success
+	 * @return -1 no fields supplied
+	 */
+	function createCompositeType($name, $fields, $field, $type, $array, $length, $colcomment, $typcomment) {
+		$f_schema = $this->_schema;
+		$this->fieldClean($f_schema);
+		$this->fieldClean($name);
+
+		$status = $this->beginTransaction();
+		if ($status != 0) return -1;
+
+		$found = false;
+		$first = true;
+		$comment_sql = ''; // Accumulate comments for the columns
+		$sql = "CREATE TYPE \"{$f_schema}\".\"{$name}\" AS (";
+		for ($i = 0; $i < $fields; $i++) {
+			$this->fieldClean($field[$i]);
+			$this->clean($type[$i]);
+			$this->clean($length[$i]);
+			$this->clean($colcomment[$i]);
+
+			// Skip blank columns - for user convenience
+			if ($field[$i] == '' || $type[$i] == '') continue;
+			// If not the first column, add a comma
+			if (!$first) $sql .= ", ";
+			else $first = false;
+
+			switch ($type[$i]) {
+				// Have to account for weird placing of length for with/without
+				// time zone types
+				case 'timestamp with time zone':
+				case 'timestamp without time zone':
+					$qual = substr($type[$i], 9);
+					$sql .= "\"{$field[$i]}\" timestamp";
+					if ($length[$i] != '') $sql .= "({$length[$i]})";
+					$sql .= $qual;
+					break;
+				case 'time with time zone':
+				case 'time without time zone':
+					$qual = substr($type[$i], 4);
+					$sql .= "\"{$field[$i]}\" time";
+					if ($length[$i] != '') $sql .= "({$length[$i]})";
+					$sql .= $qual;
+					break;
+				default:
+					$sql .= "\"{$field[$i]}\" {$type[$i]}";
+					if ($length[$i] != '') $sql .= "({$length[$i]})";
+			}
+			// Add array qualifier if necessary
+			if ($array[$i] == '[]') $sql .= '[]';
+
+			if ($colcomment[$i] != '') $comment_sql .= "COMMENT ON COLUMN \"{$f_schema}\".\"{$name}\".\"{$field[$i]}\" IS '{$colcomment[$i]}';\n";
+
+			$found = true;
+		}
+
+		if (!$found) return -1;
+
+		$sql .= ")";
+
+		$status = $this->execute($sql);
+		if ($status) {
+			$this->rollbackTransaction();
+			return -1;
+		}
+
+		if ($typcomment != '') {
+			$status = $this->setComment('TYPE', $name, '', $typcomment, true);
+			if ($status) {
+				$this->rollbackTransaction();
+				return -1;
+			}
+		}
+
+		if ($comment_sql != '') {
+			$status = $this->execute($comment_sql);
+			if ($status) {
+				$this->rollbackTransaction();
+				return -1;
+			}
+		}
+		return $this->endTransaction();
+	}
+
+	/**
+	 * Returns a list of all casts in the database
+	 * @return All casts
+	 */
+	function getCasts() {
+		global $conf;
+
+		if ($conf['show_system'])
+			$where = '';
+		else
+			$where = '
+				AND n1.nspname NOT LIKE $$pg\_%$$
+				AND n2.nspname NOT LIKE $$pg\_%$$
+				AND n3.nspname NOT LIKE $$pg\_%$$
+			';
+
+		$sql = "
+			SELECT
+				c.castsource::pg_catalog.regtype AS castsource,
+				c.casttarget::pg_catalog.regtype AS casttarget,
+				CASE WHEN c.castfunc=0 THEN NULL
+				ELSE c.castfunc::pg_catalog.regprocedure END AS castfunc,
+				c.castcontext,
+				obj_description(c.oid, 'pg_cast') as castcomment
+			FROM
+				(pg_catalog.pg_cast c LEFT JOIN pg_catalog.pg_proc p ON c.castfunc=p.oid JOIN pg_catalog.pg_namespace n3 ON p.pronamespace=n3.oid),
+				pg_catalog.pg_type t1,
+				pg_catalog.pg_type t2,
+				pg_catalog.pg_namespace n1,
+				pg_catalog.pg_namespace n2
+			WHERE
+				c.castsource=t1.oid
+				AND c.casttarget=t2.oid
+				AND t1.typnamespace=n1.oid
+				AND t2.typnamespace=n2.oid
+				{$where}
+			ORDER BY 1, 2
+		";
+
+		return $this->selectSet($sql);
+	}
+
+	/**
+	 * Returns a list of all conversions in the database
+	 * @return All conversions
+	 */
+	function getConversions() {
+		$c_schema = $this->_schema;
+		$this->clean($c_schema);
+		$sql = "
+			SELECT
+			       c.conname,
+			       pg_catalog.pg_encoding_to_char(c.conforencoding) AS conforencoding,
+			       pg_catalog.pg_encoding_to_char(c.contoencoding) AS contoencoding,
+			       c.condefault,
+			       pg_catalog.obj_description(c.oid, 'pg_conversion') AS concomment
+			FROM pg_catalog.pg_conversion c, pg_catalog.pg_namespace n
+			WHERE n.oid = c.connamespace
+			      AND n.nspname='{$c_schema}'
+			ORDER BY 1;
+		";
+
+		return $this->selectSet($sql);
+	}
+
+	// Rule functions
+
+	/**
+	 * Returns a list of all rules on a table OR view
+	 * @param $table The table to find rules for
+	 * @return A recordset
+	 */
+	function getRules($table) {
+		$c_schema = $this->_schema;
+		$this->clean($c_schema);
+		$this->clean($table);
+
+		$sql = "
+			SELECT *
+			FROM pg_catalog.pg_rules
+			WHERE
+				schemaname='{$c_schema}' AND tablename='{$table}'
+			ORDER BY rulename
+		";
+
+		return $this->selectSet($sql);
+	}
+
+	/**
+	 * Edits a rule on a table OR view
+	 * @param $name The name of the new rule
+	 * @param $event SELECT, INSERT, UPDATE or DELETE
+	 * @param $table Table on which to create the rule
+	 * @param $where When to execute the rule, '' indicates always
+	 * @param $instead True if an INSTEAD rule, false otherwise
+	 * @param $type NOTHING for a do nothing rule, SOMETHING to use given action
+	 * @param $action The action to take
+	 * @return 0 success
+	 * @return -1 invalid event
+	 */
+	function setRule($name, $event, $table, $where, $instead, $type, $action) {
+		return $this->createRule($name, $event, $table, $where, $instead, $type, $action, true);
+	}
+
+	/**
+	 * Creates a rule
+	 * @param $name The name of the new rule
+	 * @param $event SELECT, INSERT, UPDATE or DELETE
+	 * @param $table Table on which to create the rule
+	 * @param $where When to execute the rule, '' indicates always
+	 * @param $instead True if an INSTEAD rule, false otherwise
+	 * @param $type NOTHING for a do nothing rule, SOMETHING to use given action
+	 * @param $action The action to take
+	 * @param $replace (optional) True to replace existing rule, false otherwise
+	 * @return 0 success
+	 * @return -1 invalid event
+	 */
+	function createRule($name, $event, $table, $where, $instead, $type, $action, $replace = false) {
+		$f_schema = $this->_schema;
+		$this->fieldClean($f_schema);
+		$this->fieldClean($name);
+		$this->fieldClean($table);
+		if (!in_array($event, $this->rule_events)) return -1;
+
+		$sql = "CREATE";
+		if ($replace) $sql .= " OR REPLACE";
+		$sql .= " RULE \"{$name}\" AS ON {$event} TO \"{$f_schema}\".\"{$table}\"";
+		// Can't escape WHERE clause
+		if ($where != '') $sql .= " WHERE {$where}";
+		$sql .= " DO";
+		if ($instead) $sql .= " INSTEAD";
+		if ($type == 'NOTHING')
+			$sql .= " NOTHING";
+		else $sql .= " ({$action})";
+
+		return $this->execute($sql);
+	}
+
+	/**
+	 * Removes a rule from a table OR view
+	 * @param $rule The rule to drop
+	 * @param $relation The relation from which to drop
+	 * @param $cascade True to cascade drop, false to restrict
+	 * @return 0 success
+	 */
+	function dropRule($rule, $relation, $cascade) {
+		$f_schema = $this->_schema;
+		$this->fieldClean($f_schema);
+		$this->fieldClean($rule);
+		$this->fieldClean($relation);
+
+		$sql = "DROP RULE \"{$rule}\" ON \"{$f_schema}\".\"{$relation}\"";
+		if ($cascade) $sql .= " CASCADE";
+
+		return $this->execute($sql);
+	}
+
+	// Trigger functions
+
+	/**
+	 * Grabs a single trigger
+	 * @param $table The name of a table whose triggers to retrieve
+	 * @param $trigger The name of the trigger to retrieve
+	 * @return A recordset
+	 */
+	function getTrigger($table, $trigger) {
+		$c_schema = $this->_schema;
+		$this->clean($c_schema);
+		$this->clean($table);
+		$this->clean($trigger);
+
+		$sql = "
+			SELECT * FROM pg_catalog.pg_trigger t, pg_catalog.pg_class c
+			WHERE t.tgrelid=c.oid AND c.relname='{$table}' AND t.tgname='{$trigger}'
+				AND c.relnamespace=(
+					SELECT oid FROM pg_catalog.pg_namespace
+					WHERE nspname='{$c_schema}')";
+
+		return $this->selectSet($sql);
+	}
+
+	/**
+	 * Grabs a list of triggers on a table
+	 * @param $table The name of a table whose triggers to retrieve
+	 * @return A recordset
+	 */
+	function getTriggers($table = '') {
+		$c_schema = $this->_schema;
+		$this->clean($c_schema);
+		$this->clean($table);
+
+		$sql = "SELECT
+				t.tgname, pg_catalog.pg_get_triggerdef(t.oid) AS tgdef,
+				CASE WHEN t.tgenabled = 'D' THEN FALSE ELSE TRUE END AS tgenabled, p.oid AS prooid,
+				p.proname || ' (' || pg_catalog.oidvectortypes(p.proargtypes) || ')' AS proproto,
+				ns.nspname AS pronamespace
+			FROM pg_catalog.pg_trigger t, pg_catalog.pg_proc p, pg_catalog.pg_namespace ns
+			WHERE t.tgrelid = (SELECT oid FROM pg_catalog.pg_class WHERE relname='{$table}'
+				AND relnamespace=(SELECT oid FROM pg_catalog.pg_namespace WHERE nspname='{$c_schema}'))
+				AND ( tgconstraint = 0 OR NOT EXISTS
+						(SELECT 1 FROM pg_catalog.pg_depend d    JOIN pg_catalog.pg_constraint c
+							ON (d.refclassid = c.tableoid AND d.refobjid = c.oid)
+						WHERE d.classid = t.tableoid AND d.objid = t.oid AND d.deptype = 'i' AND c.contype = 'f'))
+				AND p.oid=t.tgfoid
+				AND p.pronamespace = ns.oid";
+
+		return $this->selectSet($sql);
+	}
+
+	/**
+	 * A helper function for getTriggers that translates
+	 * an array of attribute numbers to an array of field names.
+	 * Note: Only needed for pre-7.4 servers, this function is deprecated
+	 * @param $trigger An array containing fields from the trigger table
+	 * @return The trigger definition string
+	 */
+	function getTriggerDef($trigger) {
+
+		$this->fieldArrayClean($trigger);
+		// Constants to figure out tgtype
+		if (!defined('TRIGGER_TYPE_ROW')) define ('TRIGGER_TYPE_ROW', (1 << 0));
+		if (!defined('TRIGGER_TYPE_BEFORE')) define ('TRIGGER_TYPE_BEFORE', (1 << 1));
+		if (!defined('TRIGGER_TYPE_INSERT')) define ('TRIGGER_TYPE_INSERT', (1 << 2));
+		if (!defined('TRIGGER_TYPE_DELETE')) define ('TRIGGER_TYPE_DELETE', (1 << 3));
+		if (!defined('TRIGGER_TYPE_UPDATE')) define ('TRIGGER_TYPE_UPDATE', (1 << 4));
+
+		$trigger['tgisconstraint'] = $this->phpBool($trigger['tgisconstraint']);
+		$trigger['tgdeferrable'] = $this->phpBool($trigger['tgdeferrable']);
+		$trigger['tginitdeferred'] = $this->phpBool($trigger['tginitdeferred']);
+
+		// Constraint trigger or normal trigger
+		if ($trigger['tgisconstraint'])
+			$tgdef = 'CREATE CONSTRAINT TRIGGER ';
+		else
+			$tgdef = 'CREATE TRIGGER ';
+
+		$tgdef .= "\"{$trigger['tgname']}\" ";
+
+		// Trigger type
+		$findx = 0;
+		if (($trigger['tgtype'] & TRIGGER_TYPE_BEFORE) == TRIGGER_TYPE_BEFORE)
+			$tgdef .= 'BEFORE';
+		else
+			$tgdef .= 'AFTER';
+
+		if (($trigger['tgtype'] & TRIGGER_TYPE_INSERT) == TRIGGER_TYPE_INSERT) {
+			$tgdef .= ' INSERT';
+			$findx++;
+		}
+		if (($trigger['tgtype'] & TRIGGER_TYPE_DELETE) == TRIGGER_TYPE_DELETE) {
+			if ($findx > 0)
+				$tgdef .= ' OR DELETE';
+			else {
+				$tgdef .= ' DELETE';
+				$findx++;
+			}
+		}
+		if (($trigger['tgtype'] & TRIGGER_TYPE_UPDATE) == TRIGGER_TYPE_UPDATE) {
+			if ($findx > 0)
+				$tgdef .= ' OR UPDATE';
+			else
+				$tgdef .= ' UPDATE';
+		}
+
+		$f_schema = $this->_schema;
+		$this->fieldClean($f_schema);
+		// Table name
+		$tgdef .= " ON \"{$f_schema}\".\"{$trigger['relname']}\" ";
+
+		// Deferrability
+		if ($trigger['tgisconstraint']) {
+			if ($trigger['tgconstrrelid'] != 0) {
+				// Assume constrelname is not null
+				$tgdef .= " FROM \"{$trigger['tgconstrrelname']}\" ";
+			}
+			if (!$trigger['tgdeferrable'])
+				$tgdef .= 'NOT ';
+			$tgdef .= 'DEFERRABLE INITIALLY ';
+			if ($trigger['tginitdeferred'])
+				$tgdef .= 'DEFERRED ';
+			else
+				$tgdef .= 'IMMEDIATE ';
+		}
+
+		// Row or statement
+		if ($trigger['tgtype'] & TRIGGER_TYPE_ROW == TRIGGER_TYPE_ROW)
+			$tgdef .= 'FOR EACH ROW ';
+		else
+			$tgdef .= 'FOR EACH STATEMENT ';
+
+		// Execute procedure
+		$tgdef .= "EXECUTE PROCEDURE \"{$trigger['tgfname']}\"(";
+
+		// Parameters
+		// Escape null characters
+		$v = addCSlashes($trigger['tgargs'], "\0");
+		// Split on escaped null characters
+		$params = explode('\\000', $v);
+		for ($findx = 0; $findx < $trigger['tgnargs']; $findx++) {
+			$param = "'" . str_replace('\'', '\\\'', $params[$findx]) . "'";
+			$tgdef .= $param;
+			if ($findx < ($trigger['tgnargs'] - 1))
+				$tgdef .= ', ';
+		}
+
+		// Finish it off
+		$tgdef .= ')';
+
+		return $tgdef;
+	}
+
+	/**
+	 * Returns a list of all functions that can be used in triggers
+	 */
+	function getTriggerFunctions() {
+		return $this->getFunctions(true, 'trigger');
+	}
+
+	/**
+	 * Creates a trigger
+	 * @param $tgname The name of the trigger to create
+	 * @param $table The name of the table
+	 * @param $tgproc The function to execute
+	 * @param $tgtime BEFORE or AFTER
+	 * @param $tgevent Event
+	 * @param $tgargs The function arguments
+	 * @return 0 success
+	 */
+	function createTrigger($tgname, $table, $tgproc, $tgtime, $tgevent, $tgfrequency, $tgargs) {
+		$f_schema = $this->_schema;
+		$this->fieldClean($f_schema);
+		$this->fieldClean($tgname);
+		$this->fieldClean($table);
+		$this->fieldClean($tgproc);
+
+		/* No Statement Level Triggers in PostgreSQL (by now) */
+		$sql = "CREATE TRIGGER \"{$tgname}\" {$tgtime}
+				{$tgevent} ON \"{$f_schema}\".\"{$table}\"
+				FOR EACH {$tgfrequency} EXECUTE PROCEDURE \"{$tgproc}\"({$tgargs})";
+
+		return $this->execute($sql);
+	}
+
+	/**
+	 * Alters a trigger
+	 * @param $table The name of the table containing the trigger
+	 * @param $trigger The name of the trigger to alter
+	 * @param $name The new name for the trigger
+	 * @return 0 success
+	 */
+	function alterTrigger($table, $trigger, $name) {
+		$f_schema = $this->_schema;
+		$this->fieldClean($f_schema);
+		$this->fieldClean($table);
+		$this->fieldClean($trigger);
+		$this->fieldClean($name);
+
+		$sql = "ALTER TRIGGER \"{$trigger}\" ON \"{$f_schema}\".\"{$table}\" RENAME TO \"{$name}\"";
+
+		return $this->execute($sql);
+	}
+
+	/**
+	 * Drops a trigger
+	 * @param $tgname The name of the trigger to drop
+	 * @param $table The table from which to drop the trigger
+	 * @param $cascade True to cascade drop, false to restrict
+	 * @return 0 success
+	 */
+	function dropTrigger($tgname, $table, $cascade) {
+		$f_schema = $this->_schema;
+		$this->fieldClean($f_schema);
+		$this->fieldClean($tgname);
+		$this->fieldClean($table);
+
+		$sql = "DROP TRIGGER \"{$tgname}\" ON \"{$f_schema}\".\"{$table}\"";
+		if ($cascade) $sql .= " CASCADE";
+
+		return $this->execute($sql);
+	}
+
+	/**
+	 * Enables a trigger
+	 * @param $tgname The name of the trigger to enable
+	 * @param $table The table in which to enable the trigger
+	 * @return 0 success
+	 */
+	function enableTrigger($tgname, $table) {
+		$f_schema = $this->_schema;
+		$this->fieldClean($f_schema);
+		$this->fieldClean($tgname);
+		$this->fieldClean($table);
+
+		$sql = "ALTER TABLE \"{$f_schema}\".\"{$table}\" ENABLE TRIGGER \"{$tgname}\"";
+
+		return $this->execute($sql);
+	}
+
+	/**
+	 * Disables a trigger
+	 * @param $tgname The name of the trigger to disable
+	 * @param $table The table in which to disable the trigger
+	 * @return 0 success
+	 */
+	function disableTrigger($tgname, $table) {
+		$f_schema = $this->_schema;
+		$this->fieldClean($f_schema);
+		$this->fieldClean($tgname);
+		$this->fieldClean($table);
+
+		$sql = "ALTER TABLE \"{$f_schema}\".\"{$table}\" DISABLE TRIGGER \"{$tgname}\"";
+
+		return $this->execute($sql);
+	}
+
+	// Operator functions
+
+	/**
+	 * Returns a list of all operators in the database
+	 * @return All operators
+	 */
+	function getOperators() {
+		$c_schema = $this->_schema;
+		$this->clean($c_schema);
+		// We stick with the subselects here, as you cannot ORDER BY a regtype
+		$sql = "
+			SELECT
+            	po.oid,	po.oprname,
+				(SELECT pg_catalog.format_type(oid, NULL) FROM pg_catalog.pg_type pt WHERE pt.oid=po.oprleft) AS oprleftname,
+				(SELECT pg_catalog.format_type(oid, NULL) FROM pg_catalog.pg_type pt WHERE pt.oid=po.oprright) AS oprrightname,
+				po.oprresult::pg_catalog.regtype AS resultname,
+		        pg_catalog.obj_description(po.oid, 'pg_operator') AS oprcomment
+			FROM
+				pg_catalog.pg_operator po
+			WHERE
+				po.oprnamespace = (SELECT oid FROM pg_catalog.pg_namespace WHERE nspname='{$c_schema}')
+			ORDER BY
+				po.oprname, oprleftname, oprrightname
+		";
+
+		return $this->selectSet($sql);
+	}
+
+	/**
+	 * Returns all details for a particular operator
+	 * @param $operator_oid The oid of the operator
+	 * @return Function info
+	 */
+	function getOperator($operator_oid) {
+		$this->clean($operator_oid);
+
+		$sql = "
+			SELECT
+            	po.oid, po.oprname,
+				oprleft::pg_catalog.regtype AS oprleftname,
+				oprright::pg_catalog.regtype AS oprrightname,
+				oprresult::pg_catalog.regtype AS resultname,
+				po.oprcanhash,
+				oprcanmerge,
+				oprcom::pg_catalog.regoperator AS oprcom,
+				oprnegate::pg_catalog.regoperator AS oprnegate,
+				po.oprcode::pg_catalog.regproc AS oprcode,
+				po.oprrest::pg_catalog.regproc AS oprrest,
+				po.oprjoin::pg_catalog.regproc AS oprjoin
+			FROM
+				pg_catalog.pg_operator po
+			WHERE
+				po.oid='{$operator_oid}'
+		";
+
+		return $this->selectSet($sql);
+	}
+
+	/**
+	 * Drops an operator
+	 * @param $operator_oid The OID of the operator to drop
+	 * @param $cascade True to cascade drop, false to restrict
+	 * @return 0 success
+	 */
+	function dropOperator($operator_oid, $cascade) {
+		// Function comes in with $object as operator OID
+		$opr = $this->getOperator($operator_oid);
+		$f_schema = $this->_schema;
+		$this->fieldClean($f_schema);
+		$this->fieldClean($opr->fields['oprname']);
+
+		$sql = "DROP OPERATOR \"{$f_schema}\".{$opr->fields['oprname']} (";
+		// Quoting or formatting here???
+		if ($opr->fields['oprleftname'] !== null) $sql .= $opr->fields['oprleftname'] . ', ';
+		else $sql .= "NONE, ";
+		if ($opr->fields['oprrightname'] !== null) $sql .= $opr->fields['oprrightname'] . ')';
+		else $sql .= "NONE)";
+
+		if ($cascade) $sql .= " CASCADE";
+
+		return $this->execute($sql);
+	}
+
+	// Operator Class functions
+
+	/**
+	 *  Gets all opclasses
+	 *
+	 * @return A recordset
+	 */
+
+	function getOpClasses() {
+		$c_schema = $this->_schema;
+		$this->clean($c_schema);
+		$sql = "
+			SELECT
+				pa.amname, po.opcname,
+				po.opcintype::pg_catalog.regtype AS opcintype,
+				po.opcdefault,
+				pg_catalog.obj_description(po.oid, 'pg_opclass') AS opccomment
+			FROM
+				pg_catalog.pg_opclass po, pg_catalog.pg_am pa, pg_catalog.pg_namespace pn
+			WHERE
+				po.opcmethod=pa.oid
+				AND po.opcnamespace=pn.oid
+				AND pn.nspname='{$c_schema}'
+			ORDER BY 1,2
+			";
+
+		return $this->selectSet($sql);
+	}
+
+	// FTS functions
+
+ 	/**
+ 	 * Creates a new FTS configuration.
+ 	 * @param string $cfgname The name of the FTS configuration to create
+ 	 * @param string $parser The parser to be used in new FTS configuration
+ 	 * @param string $locale Locale of the FTS configuration
+ 	 * @param string $template The existing FTS configuration to be used as template for the new one
+ 	 * @param string $withmap Should we copy whole map of existing FTS configuration to the new one
+ 	 * @param string $makeDefault Should this configuration be the default for locale given
+ 	 * @param string $comment If omitted, defaults to nothing
+	 *
+ 	 * @return 0 success
+ 	 */
+ 	function createFtsConfiguration($cfgname, $parser = '', $template = '', $comment = '') {
+		$f_schema = $this->_schema;
+		$this->fieldClean($f_schema);
+ 		$this->fieldClean($cfgname);
+
+ 		$sql = "CREATE TEXT SEARCH CONFIGURATION \"{$f_schema}\".\"{$cfgname}\" (";
+ 		if ($parser != '') {
+			$this->fieldClean($parser['schema']);
+			$this->fieldClean($parser['parser']);
+			$parser = "\"{$parser['schema']}\".\"{$parser['parser']}\"";
+			$sql .= " PARSER = {$parser}";
+		}
+ 		if ($template != '') {
+			$this->fieldClean($template['schema']);
+			$this->fieldClean($template['name']);
+ 			$sql .= " COPY = \"{$template['schema']}\".\"{$template['name']}\"";
+ 		}
+		$sql .= ")";
+
+ 		if ($comment != '') {
+ 			$status = $this->beginTransaction();
+ 			if ($status != 0) return -1;
+ 		}
+
+ 		// Create the FTS configuration
+ 		$status =  $this->execute($sql);
+ 		if ($status != 0) {
+ 			$this->rollbackTransaction();
+ 			return -1;
+ 		}
+
+ 		// Set the comment
+ 		if ($comment != '') {
+ 			$status = $this->setComment('TEXT SEARCH CONFIGURATION', $cfgname, '', $comment);
+ 			if ($status != 0) {
+ 				$this->rollbackTransaction();
+ 				return -1;
+ 			}
+
+ 			return $this->endTransaction();
+ 		}
+
+ 		return 0;
+ 	}
+
+ 	/**
+ 	 * Returns available FTS configurations
+	 * @param $all if false, returns schema qualified FTS confs
+	 *
+	 * @return A recordset
+ 	 */
+ 	function getFtsConfigurations($all = true) {
+		$c_schema = $this->_schema;
+		$this->clean($c_schema);
+		$sql = "
+			SELECT
+				n.nspname as schema,
+				c.cfgname as name,
+				pg_catalog.obj_description(c.oid, 'pg_ts_config') as comment
+			FROM
+				pg_catalog.pg_ts_config c
+				JOIN pg_catalog.pg_namespace n ON n.oid = c.cfgnamespace
+			WHERE
+				pg_catalog.pg_ts_config_is_visible(c.oid)";
+
+		if (!$all)
+			$sql.= " AND  n.nspname='{$c_schema}'\n";
+
+		$sql.= "ORDER BY name";
+
+ 		return $this->selectSet($sql);
+ 	}
+
+ 	/**
+ 	 * Return all information related to a FTS configuration
+ 	 * @param $ftscfg The name of the FTS configuration
+	 *
+ 	 * @return FTS configuration information
+ 	 */
+ 	function getFtsConfigurationByName($ftscfg) {
+ 		$c_schema = $this->_schema;
+		$this->clean($c_schema);
+		$this->clean($ftscfg);
+ 		$sql = "
+			SELECT
+				n.nspname as schema,
+				c.cfgname as name,
+				p.prsname as parser,
+				c.cfgparser as parser_id,
+				pg_catalog.obj_description(c.oid, 'pg_ts_config') as comment
+			FROM pg_catalog.pg_ts_config c
+				LEFT JOIN pg_catalog.pg_namespace n ON n.oid = c.cfgnamespace
+				LEFT JOIN pg_catalog.pg_ts_parser p ON p.oid = c.cfgparser
+			WHERE pg_catalog.pg_ts_config_is_visible(c.oid)
+				AND c.cfgname = '{$ftscfg}'
+				AND n.nspname='{$c_schema}'";
+
+ 		return $this->selectSet($sql);
+ 	}
+
+ 	/**
+ 	 * Returns the map of FTS configuration given
+	 * (list of mappings (tokens) and their processing dictionaries)
+ 	 * @param string $ftscfg Name of the FTS configuration
+	 *
+	 * @return RecordSet
+ 	 */
+ 	function getFtsConfigurationMap($ftscfg) {
+
+ 		$c_schema = $this->_schema;
+		$this->clean($c_schema);
+		$this->fieldClean($ftscfg);
+
+ 		$oidSet = $this->selectSet("SELECT c.oid
+			FROM pg_catalog.pg_ts_config AS c
+				LEFT JOIN pg_catalog.pg_namespace n ON (n.oid = c.cfgnamespace)
+			WHERE c.cfgname = '{$ftscfg}'
+				AND n.nspname='{$c_schema}'");
+
+ 		$oid = $oidSet->fields['oid'];
+
+ 		$sql = "
+ 			SELECT
+    			(SELECT t.alias FROM pg_catalog.ts_token_type(c.cfgparser) AS t WHERE t.tokid = m.maptokentype) AS name,
+        		(SELECT t.description FROM pg_catalog.ts_token_type(c.cfgparser) AS t WHERE t.tokid = m.maptokentype) AS description,
+				c.cfgname AS cfgname, n.nspname ||'.'|| d.dictname as dictionaries
+			FROM
+				pg_catalog.pg_ts_config AS c, pg_catalog.pg_ts_config_map AS m, pg_catalog.pg_ts_dict d,
+				pg_catalog.pg_namespace n
+			WHERE
+				c.oid = {$oid}
+				AND m.mapcfg = c.oid
+				AND m.mapdict = d.oid
+				AND d.dictnamespace = n.oid
+			ORDER BY name
+			";
+ 		return $this->selectSet($sql);
+ 	}
+
+ 	/**
+ 	 * Returns FTS parsers available
+	 * @param $all if false, return only Parsers from the current schema
+	 *
+	 * @return RecordSet
+ 	 */
+ 	function getFtsParsers($all = true) {
+		$c_schema = $this->_schema;
+		$this->clean($c_schema);
+ 		$sql = "
+			SELECT
+			   n.nspname as schema,
+			   p.prsname as name,
+			   pg_catalog.obj_description(p.oid, 'pg_ts_parser') as comment
+			FROM pg_catalog.pg_ts_parser p
+				LEFT JOIN pg_catalog.pg_namespace n ON (n.oid = p.prsnamespace)
+			WHERE pg_catalog.pg_ts_parser_is_visible(p.oid)";
+
+		if (!$all)
+			$sql.= " AND n.nspname='{$c_schema}'\n";
+
+		$sql.= "ORDER BY name";
+
+ 		return $this->selectSet($sql);
+ 	}
+
+ 	/**
+ 	 * Returns FTS dictionaries available
+	 * @param $all if false, return only Dics from the current schema
+	 *
+	 * @returns RecordSet
+ 	 */
+ 	function getFtsDictionaries($all = true) {
+		$c_schema = $this->_schema;
+		$this->clean($c_schema);
+ 		$sql = "
+ 			SELECT
+				n.nspname as schema, d.dictname as name,
+				pg_catalog.obj_description(d.oid, 'pg_ts_dict') as comment
+			FROM pg_catalog.pg_ts_dict d
+				LEFT JOIN pg_catalog.pg_namespace n ON n.oid = d.dictnamespace
+			WHERE pg_catalog.pg_ts_dict_is_visible(d.oid)";
+
+		if (!$all)
+			$sql.= " AND n.nspname='{$c_schema}'\n";
+
+		$sql.= "ORDER BY name;";
+
+ 		return $this->selectSet($sql);
+ 	}
+
+ 	/**
+ 	 * Returns all FTS dictionary templates available
+ 	 */
+ 	function getFtsDictionaryTemplates() {
+
+ 		$sql = "
+ 			SELECT
+				n.nspname as schema,
+				t.tmplname as name,
+				( SELECT COALESCE(np.nspname, '(null)')::pg_catalog.text || '.' || p.proname
+					FROM pg_catalog.pg_proc p
+					LEFT JOIN pg_catalog.pg_namespace np ON np.oid = p.pronamespace
+					WHERE t.tmplinit = p.oid ) AS  init,
+				( SELECT COALESCE(np.nspname, '(null)')::pg_catalog.text || '.' || p.proname
+					FROM pg_catalog.pg_proc p
+					LEFT JOIN pg_catalog.pg_namespace np ON np.oid = p.pronamespace
+					WHERE t.tmpllexize = p.oid ) AS  lexize,
+				pg_catalog.obj_description(t.oid, 'pg_ts_template') as comment
+			FROM pg_catalog.pg_ts_template t
+				LEFT JOIN pg_catalog.pg_namespace n ON n.oid = t.tmplnamespace
+			WHERE pg_catalog.pg_ts_template_is_visible(t.oid)
+			ORDER BY name;";
+
+ 		return $this->selectSet($sql);
+ 	}
+
+ 	/**
+ 	 * Drops FTS coniguration
+	 * @param $ftscfg The configuration's name
+	 * @param $cascade Cascade to dependenced objects
+	 *
+	 * @return 0 on success
+ 	 */
+ 	function dropFtsConfiguration($ftscfg, $cascade) {
+		$f_schema = $this->_schema;
+		$this->fieldClean($f_schema);
+ 		$this->fieldClean($ftscfg);
+
+ 		$sql = "DROP TEXT SEARCH CONFIGURATION \"{$f_schema}\".\"{$ftscfg}\"";
+ 		if ($cascade) $sql .=  ' CASCADE';
+
+ 		return $this->execute($sql);
+ 	}
+
+ 	/**
+ 	 * Drops FTS dictionary
+	 * @param $ftsdict The dico's name
+	 * @param $cascade Cascade to dependenced objects
+ 	 *
+ 	 * @todo Support of dictionary templates dropping
+	 * @return 0 on success
+ 	 */
+ 	function dropFtsDictionary($ftsdict, $cascade) {
+		$f_schema = $this->_schema;
+		$this->fieldClean($f_schema);
+ 		$this->fieldClean($ftsdict);
+
+ 		$sql = "DROP TEXT SEARCH DICTIONARY";
+ 		$sql .= " \"{$f_schema}\".\"{$ftsdict}\"";
+ 		if ($cascade) $sql .= ' CASCADE';
+
+ 		return $this->execute($sql);
+ 	}
+
+ 	/**
+ 	 * Alters FTS configuration
+	 * @param $cfgname The conf's name
+	 * @param $comment A comment on for the conf
+	 * @param $name The new conf name
+	 *
+	 * @return 0 on success
+ 	 */
+ 	function updateFtsConfiguration($cfgname, $comment, $name) {
+
+ 		$status = $this->beginTransaction();
+ 		if ($status != 0) {
+ 			$this->rollbackTransaction();
+ 			return -1;
+ 		}
+
+		$this->fieldClean($cfgname);
+
+ 		$status = $this->setComment('TEXT SEARCH CONFIGURATION', $cfgname, '', $comment);
+ 		if ($status != 0) {
+ 			$this->rollbackTransaction();
+ 			return -1;
+ 		}
+
+ 		// Only if the name has changed
+ 		if ($name != $cfgname) {
+			$f_schema = $this->_schema;
+			$this->fieldClean($f_schema);
+			$this->fieldClean($name);
+
+ 			$sql = "ALTER TEXT SEARCH CONFIGURATION \"{$f_schema}\".\"{$cfgname}\" RENAME TO \"{$name}\"";
+ 			$status = $this->execute($sql);
+ 			if ($status != 0) {
+ 				$this->rollbackTransaction();
+ 				return -1;
+ 			}
+ 		}
+
+ 		return $this->endTransaction();
+ 	}
+
+ 	/**
+ 	 * Creates a new FTS dictionary or FTS dictionary template.
+ 	 * @param string $dictname The name of the FTS dictionary to create
+ 	 * @param boolean $isTemplate Flag whether we create usual dictionary or dictionary template
+ 	 * @param string $template The existing FTS dictionary to be used as template for the new one
+ 	 * @param string $lexize The name of the function, which does transformation of input word
+ 	 * @param string $init The name of the function, which initializes dictionary
+ 	 * @param string $option Usually, it stores various options required for the dictionary
+ 	 * @param string $comment If omitted, defaults to nothing
+	 *
+ 	 * @return 0 success
+ 	 */
+ 	function createFtsDictionary($dictname, $isTemplate = false, $template = '', $lexize = '',
+		$init = '', $option = '', $comment = '') {
+
+		$f_schema = $this->_schema;
+		$this->fieldClean($f_schema);
+ 		$this->fieldClean($dictname);
+ 		$this->fieldClean($template);
+ 		$this->fieldClean($lexize);
+ 		$this->fieldClean($init);
+ 		$this->fieldClean($option);
+
+ 		$sql = "CREATE TEXT SEARCH";
+ 		if ($isTemplate) {
+ 			$sql .= " TEMPLATE \"{$f_schema}\".\"{$dictname}\" (";
+ 			if ($lexize != '') $sql .= " LEXIZE = {$lexize}";
+ 			if ($init != '') $sql .= ", INIT = {$init}";
+            $sql .= ")";
+ 			$whatToComment = 'TEXT SEARCH TEMPLATE';
+ 		} else {
+ 			$sql .= " DICTIONARY \"{$f_schema}\".\"{$dictname}\" (";
+ 			if ($template != '') {
+				$this->fieldClean($template['schema']);
+				$this->fieldClean($template['name']);
+				$template = "\"{$template['schema']}\".\"{$template['name']}\"";
+
+				$sql .= " TEMPLATE = {$template}";
+			}
+ 			if ($option != '') $sql .= ", {$option}";
+            $sql .= ")";
+ 			$whatToComment = 'TEXT SEARCH DICTIONARY';
+ 		}
+
+		/* if comment, begin a transaction to
+		 * run both commands */
+ 		if ($comment != '') {
+ 			$status = $this->beginTransaction();
+ 			if ($status != 0) return -1;
+ 		}
+
+ 		// Create the FTS dictionary
+ 		$status =  $this->execute($sql);
+ 		if ($status != 0) {
+ 			$this->rollbackTransaction();
+ 			return -1;
+ 		}
+
+ 		// Set the comment
+ 		if ($comment != '') {
+ 			$status = $this->setComment($whatToComment, $dictname, '', $comment);
+ 			if ($status != 0) {
+ 				$this->rollbackTransaction();
+ 				return -1;
+ 			}
+ 		}
+
+ 		return $this->endTransaction();
+ 	}
+
+ 	/**
+ 	 * Alters FTS dictionary or dictionary template
+	 * @param $dictname The dico's name
+	 * @param $comment The comment
+	 * @param $name The new dico's name
+	 *
+	 * @return 0 on success
+ 	 */
+ 	function updateFtsDictionary($dictname, $comment, $name) {
+
+ 		$status = $this->beginTransaction();
+ 		if ($status != 0) {
+ 			$this->rollbackTransaction();
+ 			return -1;
+ 		}
+
+		$this->fieldClean($dictname);
+ 		$status = $this->setComment('TEXT SEARCH DICTIONARY', $dictname, '', $comment);
+ 		if ($status != 0) {
+ 			$this->rollbackTransaction();
+ 			return -1;
+ 		}
+
+ 		// Only if the name has changed
+ 		if ($name != $dictname) {
+			$f_schema = $this->_schema;
+			$this->fieldClean($f_schema);
+ 			$this->fieldClean($name);
+
+ 			$sql = "ALTER TEXT SEARCH DICTIONARY \"{$f_schema}\".\"{$dictname}\" RENAME TO \"{$name}\"";
+ 			$status = $this->execute($sql);
+ 			if ($status != 0) {
+ 				$this->rollbackTransaction();
+ 				return -1;
+ 			}
+ 		}
+
+ 		return $this->endTransaction();
+ 	}
+
+ 	/**
+ 	 * Return all information relating to a FTS dictionary
+ 	 * @param $ftsdict The name of the FTS dictionary
+	 *
+ 	 * @return RecordSet of FTS dictionary information
+ 	 */
+ 	function getFtsDictionaryByName($ftsdict) {
+
+ 		$c_schema = $this->_schema;
+		$this->clean($c_schema);
+		$this->clean($ftsdict);
+
+ 		$sql = "SELECT
+			   n.nspname as schema,
+			   d.dictname as name,
+			   ( SELECT COALESCE(nt.nspname, '(null)')::pg_catalog.text || '.' || t.tmplname FROM
+				 pg_catalog.pg_ts_template t
+									  LEFT JOIN pg_catalog.pg_namespace nt ON nt.oid = t.tmplnamespace
+									  WHERE d.dicttemplate = t.oid ) AS  template,
+			   d.dictinitoption as init,
+			   pg_catalog.obj_description(d.oid, 'pg_ts_dict') as comment
+			FROM pg_catalog.pg_ts_dict d
+				LEFT JOIN pg_catalog.pg_namespace n ON n.oid = d.dictnamespace
+			WHERE d.dictname = '{$ftsdict}'
+			   AND pg_catalog.pg_ts_dict_is_visible(d.oid)
+			   AND n.nspname='{$c_schema}'
+			ORDER BY name";
+
+ 		return $this->selectSet($sql);
+ 	}
+
+ 	/**
+ 	 * Creates/updates/deletes FTS mapping.
+ 	 * @param string $cfgname The name of the FTS configuration to alter
+ 	 * @param array $mapping Array of tokens' names
+ 	 * @param string $action What to do with the mapping: add, alter or drop
+ 	 * @param string $dictname Dictionary that will process tokens given or null in case of drop action
+	 *
+ 	 * @return 0 success
+ 	 */
+ 	function changeFtsMapping($ftscfg, $mapping, $action, $dictname = null) {
+
+ 		if (count($mapping) > 0) {
+			$f_schema = $this->_schema;
+			$this->fieldClean($f_schema);
+			$this->fieldClean($ftscfg);
+			$this->fieldClean($dictname);
+			$this->arrayClean($mapping);
+
+ 			switch ($action) {
+ 				case 'alter':
+ 					$whatToDo = "ALTER";
+ 					break;
+ 				case 'drop':
+ 					$whatToDo = "DROP";
+ 					break;
+ 				default:
+ 					$whatToDo = "ADD";
+ 					break;
+ 			}
+
+ 			$sql = "ALTER TEXT SEARCH CONFIGURATION \"{$f_schema}\".\"{$ftscfg}\" {$whatToDo} MAPPING FOR ";
+ 			$sql .= implode(",", $mapping);
+ 			if ($action != 'drop' && !empty($dictname)) {
+ 				$sql .= " WITH {$dictname}";
+ 			}
+
+ 			return $this->execute($sql);
+ 		}
+		else {
+ 			return -1;
+ 		}
+ 	}
+
+ 	/**
+ 	 * Return all information related to a given FTS configuration's mapping
+ 	 * @param $ftscfg The name of the FTS configuration
+ 	 * @param $mapping The name of the mapping
+	 *
+ 	 * @return FTS configuration information
+ 	 */
+ 	function getFtsMappingByName($ftscfg, $mapping) {
+		$c_schema = $this->_schema;
+		$this->clean($c_schema);
+ 		$this->clean($ftscfg);
+ 		$this->clean($mapping);
+
+ 		$oidSet = $this->selectSet("SELECT c.oid, cfgparser
+			FROM pg_catalog.pg_ts_config AS c
+				LEFT JOIN pg_catalog.pg_namespace AS n ON n.oid = c.cfgnamespace
+			WHERE c.cfgname = '{$ftscfg}'
+				AND n.nspname='{$c_schema}'");
+
+ 		$oid = $oidSet->fields['oid'];
+ 		$cfgparser = $oidSet->fields['cfgparser'];
+
+ 		$tokenIdSet = $this->selectSet("SELECT tokid
+			FROM pg_catalog.ts_token_type({$cfgparser})
+			WHERE alias = '{$mapping}'");
+
+ 		$tokid = $tokenIdSet->fields['tokid'];
+
+ 		$sql = "SELECT
+			    (SELECT t.alias FROM pg_catalog.ts_token_type(c.cfgparser) AS t WHERE t.tokid = m.maptokentype) AS name,
+    	            d.dictname as dictionaries
+			FROM pg_catalog.pg_ts_config AS c, pg_catalog.pg_ts_config_map AS m, pg_catalog.pg_ts_dict d
+			WHERE c.oid = {$oid} AND m.mapcfg = c.oid AND m.maptokentype = {$tokid} AND m.mapdict = d.oid
+			LIMIT 1;";
+
+ 		return $this->selectSet($sql);
+ 	}
+
+ 	/**
+ 	 * Return list of FTS mappings possible for given parser
+	 * (specified by given configuration since configuration can only have 1 parser)
+	 * @param $ftscfg The config's name that use the parser
+	 *
+	 * @return 0 on success
+ 	 */
+ 	function getFtsMappings($ftscfg) {
+
+ 		$cfg = $this->getFtsConfigurationByName($ftscfg);
+
+ 		$sql = "SELECT alias AS name, description
+			FROM pg_catalog.ts_token_type({$cfg->fields['parser_id']})
+			ORDER BY name";
+
+ 		return $this->selectSet($sql);
+ 	}
+
+ 	// Language functions
+
+ 	/**
+	 * Gets all languages
+	 * @param $all True to get all languages, regardless of show_system
+	 * @return A recordset
+	 */
+	function getLanguages($all = false) {
+		global $conf;
+
+		if ($conf['show_system'] || $all)
+			$where = '';
+		else
+			$where = 'WHERE lanispl';
+
+		$sql = "
+			SELECT
+				lanname, lanpltrusted,
+				lanplcallfoid::pg_catalog.regproc AS lanplcallf
+			FROM
+				pg_catalog.pg_language
+			{$where}
+			ORDER BY lanname
+		";
+
+		return $this->selectSet($sql);
+	}
+
+	// Aggregate functions
+
+	/**
+	 * Creates a new aggregate in the database
+	 * @param $name The name of the aggregate
+	 * @param $basetype The input data type of the aggregate
+	 * @param $sfunc The name of the state transition function for the aggregate
+	 * @param $stype The data type for the aggregate's state value
+	 * @param $ffunc The name of the final function for the aggregate
+	 * @param $initcond The initial setting for the state value
+	 * @param $sortop The sort operator for the aggregate
+	 * @param $comment Aggregate comment
+	 * @return 0 success
+	 * @return -1 error
+	 */
+	function createAggregate($name, $basetype, $sfunc, $stype, $ffunc, $initcond, $sortop, $comment) {
+		$f_schema = $this->_schema;
+		$this->fieldClean($f_schema);
+		$this->fieldClean($name);
+		$this->fieldClean($basetype);
+		$this->fieldClean($sfunc);
+		$this->fieldClean($stype);
+		$this->fieldClean($ffunc);
+		$this->fieldClean($initcond);
+		$this->fieldClean($sortop);
+
+		$this->beginTransaction();
+
+		$sql = "CREATE AGGREGATE \"{$f_schema}\".\"{$name}\" (BASETYPE = \"{$basetype}\", SFUNC = \"{$sfunc}\", STYPE = \"{$stype}\"";
+		if(trim($ffunc) != '') $sql .= ", FINALFUNC = \"{$ffunc}\"";
+		if(trim($initcond) != '') $sql .= ", INITCOND = \"{$initcond}\"";
+		if(trim($sortop) != '') $sql .= ", SORTOP = \"{$sortop}\"";
+		$sql .= ")";
+
+		$status = $this->execute($sql);
+		if ($status) {
+			$this->rollbackTransaction();
+			return -1;
+		}
+
+		if (trim($comment) != '') {
+			$status = $this->setComment('AGGREGATE', $name, '', $comment, $basetype);
+			if ($status) {
+				$this->rollbackTransaction();
+				return -1;
+			}
+		}
+
+		return $this->endTransaction();
+	}
+
+	/**
+	 * Renames an aggregate function
+	 * @param $aggrname The actual name of the aggregate
+	 * @param $aggrtype The actual input data type of the aggregate
+	 * @param $newaggrname The new name of the aggregate
+	 * @return 0 success
+	 */
+	function renameAggregate($aggrschema, $aggrname, $aggrtype, $newaggrname) {
+		/* this function is called from alterAggregate where params are cleaned */
+		$sql = "ALTER AGGREGATE \"{$aggrschema}\"" . '.' . "\"{$aggrname}\" (\"{$aggrtype}\") RENAME TO \"{$newaggrname}\"";
+		return $this->execute($sql);
+	}
+
+	/**
+	 * Removes an aggregate function from the database
+	 * @param $aggrname The name of the aggregate
+	 * @param $aggrtype The input data type of the aggregate
+	 * @param $cascade True to cascade drop, false to restrict
+	 * @return 0 success
+	 */
+	function dropAggregate($aggrname, $aggrtype, $cascade) {
+		$f_schema = $this->_schema;
+		$this->fieldClean($f_schema);
+		$this->fieldClean($aggrname);
+		$this->fieldClean($aggrtype);
+
+		$sql = "DROP AGGREGATE \"{$f_schema}\".\"{$aggrname}\" (\"{$aggrtype}\")";
+		if ($cascade) $sql .= " CASCADE";
+
+		return $this->execute($sql);
+	}
+
+	/**
+	 * Gets all information for an aggregate
+	 * @param $name The name of the aggregate
+	 * @param $basetype The input data type of the aggregate
+	 * @return A recordset
+	 */
+	function getAggregate($name, $basetype) {
+		$c_schema = $this->_schema;
+		$this->clean($c_schema);
+		$this->fieldclean($name);
+		$this->fieldclean($basetype);
+
+		$sql = "
+			SELECT p.proname, CASE p.proargtypes[0]
+				WHEN 'pg_catalog.\"any\"'::pg_catalog.regtype THEN NULL
+				ELSE pg_catalog.format_type(p.proargtypes[0], NULL) END AS proargtypes,
+				a.aggtransfn, format_type(a.aggtranstype, NULL) AS aggstype, a.aggfinalfn,
+				a.agginitval, a.aggsortop, u.usename, pg_catalog.obj_description(p.oid, 'pg_proc') AS aggrcomment
+			FROM pg_catalog.pg_proc p, pg_catalog.pg_namespace n, pg_catalog.pg_user u, pg_catalog.pg_aggregate a
+			WHERE n.oid = p.pronamespace AND p.proowner=u.usesysid AND p.oid=a.aggfnoid
+				AND p.proisagg AND n.nspname='{$c_schema}'
+				AND p.proname='" . $name . "'
+				AND CASE p.proargtypes[0]
+					WHEN 'pg_catalog.\"any\"'::pg_catalog.regtype THEN ''
+					ELSE pg_catalog.format_type(p.proargtypes[0], NULL)
+				END ='" . $basetype . "'";
+
+		return $this->selectSet($sql);
+	}
+
+	/**
+	 * Gets all aggregates
+	 * @return A recordset
+	 */
+	function getAggregates() {
+		$c_schema = $this->_schema;
+		$this->clean($c_schema);
+		$sql = "SELECT p.proname, CASE p.proargtypes[0] WHEN 'pg_catalog.\"any\"'::pg_catalog.regtype THEN NULL ELSE
+			   pg_catalog.format_type(p.proargtypes[0], NULL) END AS proargtypes, a.aggtransfn, u.usename,
+			   pg_catalog.obj_description(p.oid, 'pg_proc') AS aggrcomment
+			   FROM pg_catalog.pg_proc p, pg_catalog.pg_namespace n, pg_catalog.pg_user u, pg_catalog.pg_aggregate a
+			   WHERE n.oid = p.pronamespace AND p.proowner=u.usesysid AND p.oid=a.aggfnoid
+			   AND p.proisagg AND n.nspname='{$c_schema}' ORDER BY 1, 2";
+
+		return $this->selectSet($sql);
+	}
+
+	/**
+	 * Changes the owner of an aggregate function
+	 * @param $aggrname The name of the aggregate
+	 * @param $aggrtype The input data type of the aggregate
+	 * @param $newaggrowner The new owner of the aggregate
+	 * @return 0 success
+	 */
+	function changeAggregateOwner($aggrname, $aggrtype, $newaggrowner) {
+		$f_schema = $this->_schema;
+		$this->fieldClean($f_schema);
+		$this->fieldClean($aggrname);
+		$this->fieldClean($newaggrowner);
+		$sql = "ALTER AGGREGATE \"{$f_schema}\".\"{$aggrname}\" (\"{$aggrtype}\") OWNER TO \"{$newaggrowner}\"";
+		return $this->execute($sql);
+	}
+
+	/**
+	 * Changes the schema of an aggregate function
+	 * @param $aggrname The name of the aggregate
+	 * @param $aggrtype The input data type of the aggregate
+	 * @param $newaggrschema The new schema for the aggregate
+	 * @return 0 success
+	 */
+	function changeAggregateSchema($aggrname, $aggrtype, $newaggrschema) {
+		$f_schema = $this->_schema;
+		$this->fieldClean($f_schema);
+		$this->fieldClean($aggrname);
+		$this->fieldClean($newaggrschema);
+		$sql = "ALTER AGGREGATE \"{$f_schema}\".\"{$aggrname}\" (\"{$aggrtype}\") SET SCHEMA  \"{$newaggrschema}\"";
+		return $this->execute($sql);
+	}
+
+	/**
+	 * Alters an aggregate
+	 * @param $aggrname The actual name of the aggregate
+	 * @param $aggrtype The actual input data type of the aggregate
+	 * @param $aggrowner The actual owner of the aggregate
+	 * @param $aggrschema The actual schema the aggregate belongs to
+	 * @param $aggrcomment The actual comment for the aggregate
+	 * @param $newaggrname The new name of the aggregate
+	 * @param $newaggrowner The new owner of the aggregate
+	 * @param $newaggrschema The new schema where the aggregate will belong to
+	 * @param $newaggrcomment The new comment for the aggregate
+	 * @return 0 success
+	 * @return -1 change owner error
+	 * @return -2 change comment error
+	 * @return -3 change schema error
+	 * @return -4 change name error
+	 */
+	function alterAggregate($aggrname, $aggrtype, $aggrowner, $aggrschema, $aggrcomment, $newaggrname, $newaggrowner, $newaggrschema, $newaggrcomment) {
+		// Clean fields
+		$this->fieldClean($aggrname);
+		$this->fieldClean($aggrtype);
+		$this->fieldClean($aggrowner);
+		$this->fieldClean($aggrschema);
+		$this->fieldClean($newaggrname);
+		$this->fieldClean($newaggrowner);
+		$this->fieldClean($newaggrschema);
+
+		$this->beginTransaction();
+
+		// Change the owner, if it has changed
+		if($aggrowner != $newaggrowner) {
+			$status = $this->changeAggregateOwner($aggrname, $aggrtype, $newaggrowner);
+			if($status != 0) {
+				$this->rollbackTransaction();
+				return -1;
+			}
+		}
+
+		// Set the comment, if it has changed
+		if($aggrcomment != $newaggrcomment) {
+			$status = $this->setComment('AGGREGATE', $aggrname, '', $newaggrcomment, $aggrtype);
+			if ($status) {
+				$this->rollbackTransaction();
+				return -2;
+			}
+		}
+
+		// Change the schema, if it has changed
+		if($aggrschema != $newaggrschema) {
+			$status = $this->changeAggregateSchema($aggrname, $aggrtype, $newaggrschema);
+			if($status != 0) {
+				$this->rollbackTransaction();
+				return -3;
+			}
+		}
+
+		// Rename the aggregate, if it has changed
+		if($aggrname != $newaggrname) {
+			$status = $this->renameAggregate($newaggrschema, $aggrname, $aggrtype, $newaggrname);
+			if($status != 0) {
+				$this->rollbackTransaction();
+				return -4;
+			}
+		}
+
+		return $this->endTransaction();
+	}
+
+	// Role, User/Group functions
+
+	/**
+	 * Returns all roles in the database cluster
+	 * @param $rolename (optional) The role name to exclude from the select
+	 * @return All roles
+	 */
+	function getRoles($rolename = '') {
+		$sql = '
+			SELECT rolname, rolsuper, rolcreatedb, rolcreaterole, rolinherit,
+				rolcanlogin, rolconnlimit, rolvaliduntil, rolconfig
+			FROM pg_catalog.pg_roles';
+		if($rolename) $sql .= " WHERE rolname!='{$rolename}'";
+		$sql .= ' ORDER BY rolname';
+
+		return $this->selectSet($sql);
+	}
+
+	/**
+	 * Returns information about a single role
+	 * @param $rolename The name of the role to retrieve
+	 * @return The role's data
+	 */
+	function getRole($rolename) {
+		$this->clean($rolename);
+
+		$sql = "
+			SELECT rolname, rolsuper, rolcreatedb, rolcreaterole, rolinherit,
+				rolcanlogin, rolconnlimit, rolvaliduntil, rolconfig
+			FROM pg_catalog.pg_roles WHERE rolname='{$rolename}'";
+
+		return $this->selectSet($sql);
+	}
+
+	/**
+	 * Grants membership in a role
+	 * @param $role The name of the target role
+	 * @param $rolename The name of the role that will belong to the target role
+	 * @param $admin (optional) Flag to grant the admin option
+	 * @return 0 success
+	 */
+	function grantRole($role, $rolename, $admin=0) {
+		$this->fieldClean($role);
+		$this->fieldClean($rolename);
+
+		$sql = "GRANT \"{$role}\" TO \"{$rolename}\"";
+		if($admin == 1) $sql .= ' WITH ADMIN OPTION';
+
+		return $this->execute($sql);
+	}
+
+	/**
+	 * Revokes membership in a role
+	 * @param $role The name of the target role
+	 * @param $rolename The name of the role that will not belong to the target role
+	 * @param $admin (optional) Flag to revoke only the admin option
+	 * @param $type (optional) Type of revoke: RESTRICT | CASCADE
+	 * @return 0 success
+	 */
+	function revokeRole($role, $rolename, $admin = 0, $type = 'RESTRICT') {
+		$this->fieldClean($role);
+		$this->fieldClean($rolename);
+
+		$sql = "REVOKE ";
+		if($admin == 1) $sql .= 'ADMIN OPTION FOR ';
+		$sql .= "\"{$role}\" FROM \"{$rolename}\" {$type}";
+
+		return $this->execute($sql);
+	}
+
+	/**
+	 * Returns all users in the database cluster
+	 * @return All users
+	 */
+	function getUsers() {
+		$sql = "SELECT usename, usesuper, usecreatedb, valuntil AS useexpires, useconfig
+			FROM pg_user
+			ORDER BY usename";
+
+		return $this->selectSet($sql);
+	}
+
+	/**
+	 * Returns information about a single user
+	 * @param $username The username of the user to retrieve
+	 * @return The user's data
+	 */
+	function getUser($username) {
+		$this->clean($username);
+
+		$sql = "SELECT usename, usesuper, usecreatedb, valuntil AS useexpires, useconfig
+			FROM pg_user
+			WHERE usename='{$username}'";
+
+		return $this->selectSet($sql);
+	}
+
+	/**
+	 * Creates a new role
+	 * @param $rolename The name of the role to create
+	 * @param $password A password for the role
+	 * @param $superuser Boolean whether or not the role is a superuser
+	 * @param $createdb Boolean whether or not the role can create databases
+	 * @param $createrole Boolean whether or not the role can create other roles
+	 * @param $inherits Boolean whether or not the role inherits the privileges from parent roles
+	 * @param $login Boolean whether or not the role will be allowed to login
+	 * @param $connlimit Number of concurrent connections the role can make
+	 * @param $expiry String Format 'YYYY-MM-DD HH:MM:SS'.  '' means never expire
+	 * @param $memberof (array) Roles to which the new role will be immediately added as a new member
+	 * @param $members (array) Roles which are automatically added as members of the new role
+	 * @param $adminmembers (array) Roles which are automatically added as admin members of the new role
+	 * @return 0 success
+	 */
+	function createRole($rolename, $password, $superuser, $createdb, $createrole, $inherits, $login, $connlimit, $expiry, $memberof, $members, $adminmembers) {
+		$enc = $this->_encryptPassword($rolename, $password);
+		$this->fieldClean($rolename);
+		$this->clean($enc);
+		$this->clean($connlimit);
+		$this->clean($expiry);
+		$this->fieldArrayClean($memberof);
+		$this->fieldArrayClean($members);
+		$this->fieldArrayClean($adminmembers);
+
+		$sql = "CREATE ROLE \"{$rolename}\"";
+		if ($password != '') $sql .= " WITH ENCRYPTED PASSWORD '{$enc}'";
+		$sql .= ($superuser) ? ' SUPERUSER' : ' NOSUPERUSER';
+		$sql .= ($createdb) ? ' CREATEDB' : ' NOCREATEDB';
+		$sql .= ($createrole) ? ' CREATEROLE' : ' NOCREATEROLE';
+		$sql .= ($inherits) ? ' INHERIT' : ' NOINHERIT';
+		$sql .= ($login) ? ' LOGIN' : ' NOLOGIN';
+		if ($connlimit != '') $sql .= " CONNECTION LIMIT {$connlimit}"; else  $sql .= ' CONNECTION LIMIT -1';
+		if ($expiry != '') $sql .= " VALID UNTIL '{$expiry}'"; else $sql .= " VALID UNTIL 'infinity'";
+		if (is_array($memberof) && sizeof($memberof) > 0) $sql .= ' IN ROLE "' . join('", "', $memberof) . '"';
+		if (is_array($members) && sizeof($members) > 0) $sql .= ' ROLE "' . join('", "', $members) . '"';
+		if (is_array($adminmembers) && sizeof($adminmembers) > 0) $sql .= ' ADMIN "' . join('", "', $adminmembers) . '"';
+
+		return $this->execute($sql);
+	}
+
+	/**
+	 * Adjusts a role's info
+	 * @param $rolename The name of the role to adjust
+	 * @param $password A password for the role
+	 * @param $superuser Boolean whether or not the role is a superuser
+	 * @param $createdb Boolean whether or not the role can create databases
+	 * @param $createrole Boolean whether or not the role can create other roles
+	 * @param $inherits Boolean whether or not the role inherits the privileges from parent roles
+	 * @param $login Boolean whether or not the role will be allowed to login
+	 * @param $connlimit Number of concurrent connections the role can make
+	 * @param $expiry string Format 'YYYY-MM-DD HH:MM:SS'.  '' means never expire
+	 * @param $memberof (array) Roles to which the role will be immediately added as a new member
+	 * @param $members (array) Roles which are automatically added as members of the role
+	 * @param $adminmembers (array) Roles which are automatically added as admin members of the role
+	 * @param $memberofold (array) Original roles whose the role belongs to
+	 * @param $membersold (array) Original roles that are members of the role
+	 * @param $adminmembersold (array) Original roles that are admin members of the role
+	 * @return 0 success
+	 */
+	function setRole($rolename, $password, $superuser, $createdb, $createrole, $inherits, $login, $connlimit, $expiry, $memberof, $members, $adminmembers, $memberofold, $membersold, $adminmembersold) {
+		$enc = $this->_encryptPassword($rolename, $password);
+		$this->fieldClean($rolename);
+		$this->clean($enc);
+		$this->clean($connlimit);
+		$this->clean($expiry);
+		$this->fieldArrayClean($memberof);
+		$this->fieldArrayClean($members);
+		$this->fieldArrayClean($adminmembers);
+
+		$sql = "ALTER ROLE \"{$rolename}\"";
+		if ($password != '') $sql .= " WITH ENCRYPTED PASSWORD '{$enc}'";
+		$sql .= ($superuser) ? ' SUPERUSER' : ' NOSUPERUSER';
+		$sql .= ($createdb) ? ' CREATEDB' : ' NOCREATEDB';
+		$sql .= ($createrole) ? ' CREATEROLE' : ' NOCREATEROLE';
+		$sql .= ($inherits) ? ' INHERIT' : ' NOINHERIT';
+		$sql .= ($login) ? ' LOGIN' : ' NOLOGIN';
+		if ($connlimit != '') $sql .= " CONNECTION LIMIT {$connlimit}"; else $sql .= ' CONNECTION LIMIT -1';
+		if ($expiry != '') $sql .= " VALID UNTIL '{$expiry}'"; else $sql .= " VALID UNTIL 'infinity'";
+
+		$status = $this->execute($sql);
+
+		if ($status != 0) return -1;
+
+		//memberof
+		$old = explode(',', $memberofold);
+		foreach ($memberof as $m) {
+			if (!in_array($m, $old)) {
+				$status = $this->grantRole($m, $rolename);
+				if ($status != 0) return -1;
+			}
+		}
+		if($memberofold)
+		{
+			foreach ($old as $o) {
+				if (!in_array($o, $memberof)) {
+					$status = $this->revokeRole($o, $rolename, 0, 'CASCADE');
+					if ($status != 0) return -1;
+				}
+			}
+		}
+
+		//members
+		$old = explode(',', $membersold);
+		foreach ($members as $m) {
+			if (!in_array($m, $old)) {
+				$status = $this->grantRole($rolename, $m);
+				if ($status != 0) return -1;
+			}
+		}
+		if($membersold)
+		{
+			foreach ($old as $o) {
+				if (!in_array($o, $members)) {
+					$status = $this->revokeRole($rolename, $o, 0, 'CASCADE');
+					if ($status != 0) return -1;
+				}
+			}
+		}
+
+		//adminmembers
+		$old = explode(',', $adminmembersold);
+		foreach ($adminmembers as $m) {
+			if (!in_array($m, $old)) {
+				$status = $this->grantRole($rolename, $m, 1);
+				if ($status != 0) return -1;
+			}
+		}
+		if($adminmembersold)
+		{
+			foreach ($old as $o) {
+				if (!in_array($o, $adminmembers)) {
+					$status = $this->revokeRole($rolename, $o, 1, 'CASCADE');
+					if ($status != 0) return -1;
+				}
+			}
+		}
+
+		return $status;
+	}
+
+	/**
+	 * Renames a role
+	 * @param $rolename The name of the role to rename
+	 * @param $newrolename The new name of the role
+	 * @return 0 success
+	 */
+	function renameRole($rolename, $newrolename){
+		$this->fieldClean($rolename);
+		$this->fieldClean($newrolename);
+
+		$sql = "ALTER ROLE \"{$rolename}\" RENAME TO \"{$newrolename}\"";
+
+		return $this->execute($sql);
+	}
+
+	/**
+	 * Adjusts a role's info and renames it
+	 * @param $rolename The name of the role to adjust
+	 * @param $password A password for the role
+	 * @param $superuser Boolean whether or not the role is a superuser
+	 * @param $createdb Boolean whether or not the role can create databases
+	 * @param $createrole Boolean whether or not the role can create other roles
+	 * @param $inherits Boolean whether or not the role inherits the privileges from parent roles
+	 * @param $login Boolean whether or not the role will be allowed to login
+	 * @param $connlimit Number of concurrent connections the role can make
+	 * @param $expiry string Format 'YYYY-MM-DD HH:MM:SS'.  '' means never expire
+	 * @param $memberof (array) Roles to which the role will be immediately added as a new member
+	 * @param $members (array) Roles which are automatically added as members of the role
+	 * @param $adminmembers (array) Roles which are automatically added as admin members of the role
+	 * @param $memberofold (array) Original roles whose the role belongs to
+	 * @param $membersold (array) Original roles that are members of the role
+	 * @param $adminmembersold (array) Original roles that are admin members of the role
+	 * @param $newrolename The new name of the role
+	 * @return 0 success
+	 * @return -1 transaction error
+	 * @return -2 set role attributes error
+	 * @return -3 rename error
+	 */
+	function setRenameRole($rolename, $password, $superuser, $createdb, $createrole,
+	$inherits, $login, $connlimit, $expiry, $memberof, $members, $adminmembers,
+	$memberofold, $membersold, $adminmembersold, $newrolename) {
+
+		$status = $this->beginTransaction();
+		if ($status != 0) return -1;
+
+		if ($rolename != $newrolename){
+			$status = $this->renameRole($rolename, $newrolename);
+			if ($status != 0) {
+				$this->rollbackTransaction();
+				return -3;
+			}
+			$rolename = $newrolename;
+		}
+
+		$status = $this->setRole($rolename, $password, $superuser, $createdb, $createrole, $inherits, $login, $connlimit, $expiry, $memberof, $members, $adminmembers, $memberofold, $membersold, $adminmembersold);
+		if ($status != 0) {
+			$this->rollbackTransaction();
+			return -2;
+		}
+
+		return $this->endTransaction();
+	}
+
+	/**
+	 * Removes a role
+	 * @param $rolename The name of the role to drop
+	 * @return 0 success
+	 */
+	function dropRole($rolename) {
+		$this->fieldClean($rolename);
+
+		$sql = "DROP ROLE \"{$rolename}\"";
+
+		return $this->execute($sql);
+	}
+
+	/**
+	 * Creates a new user
+	 * @param $username The username of the user to create
+	 * @param $password A password for the user
+	 * @param $createdb boolean Whether or not the user can create databases
+	 * @param $createuser boolean Whether or not the user can create other users
+	 * @param $expiry string Format 'YYYY-MM-DD HH:MM:SS'.  '' means never expire
+	 * @param $group (array) The groups to create the user in
+	 * @return 0 success
+	 */
+	function createUser($username, $password, $createdb, $createuser, $expiry, $groups) {
+		$enc = $this->_encryptPassword($username, $password);
+		$this->fieldClean($username);
+		$this->clean($enc);
+		$this->clean($expiry);
+		$this->fieldArrayClean($groups);
+
+		$sql = "CREATE USER \"{$username}\"";
+		if ($password != '') $sql .= " WITH ENCRYPTED PASSWORD '{$enc}'";
+		$sql .= ($createdb) ? ' CREATEDB' : ' NOCREATEDB';
+		$sql .= ($createuser) ? ' CREATEUSER' : ' NOCREATEUSER';
+		if (is_array($groups) && sizeof($groups) > 0) $sql .= " IN GROUP \"" . join('", "', $groups) . "\"";
+		if ($expiry != '') $sql .= " VALID UNTIL '{$expiry}'";
+		else $sql .= " VALID UNTIL 'infinity'";
+
+		return $this->execute($sql);
+	}
+
+	/**
+	 * Renames a user
+	 * @param $username The username of the user to rename
+	 * @param $newname The new name of the user
+	 * @return 0 success
+	 */
+	function renameUser($username, $newname){
+		$this->fieldClean($username);
+		$this->fieldClean($newname);
+
+		$sql = "ALTER USER \"{$username}\" RENAME TO \"{$newname}\"";
+
+		return $this->execute($sql);
+	}
+
+	/**
+	 * Adjusts a user's info
+	 * @param $username The username of the user to modify
+	 * @param $password A new password for the user
+	 * @param $createdb boolean Whether or not the user can create databases
+	 * @param $createuser boolean Whether or not the user can create other users
+	 * @param $expiry string Format 'YYYY-MM-DD HH:MM:SS'.  '' means never expire.
+	 * @return 0 success
+	 */
+	function setUser($username, $password, $createdb, $createuser, $expiry) {
+		$enc = $this->_encryptPassword($username, $password);
+		$this->fieldClean($username);
+		$this->clean($enc);
+		$this->clean($expiry);
+
+		$sql = "ALTER USER \"{$username}\"";
+		if ($password != '') $sql .= " WITH ENCRYPTED PASSWORD '{$enc}'";
+		$sql .= ($createdb) ? ' CREATEDB' : ' NOCREATEDB';
+		$sql .= ($createuser) ? ' CREATEUSER' : ' NOCREATEUSER';
+		if ($expiry != '') $sql .= " VALID UNTIL '{$expiry}'";
+		else $sql .= " VALID UNTIL 'infinity'";
+
+		return $this->execute($sql);
+	}
+
+	/**
+	 * Adjusts a user's info and renames the user
+	 * @param $username The username of the user to modify
+	 * @param $password A new password for the user
+	 * @param $createdb boolean Whether or not the user can create databases
+	 * @param $createuser boolean Whether or not the user can create other users
+	 * @param $expiry string Format 'YYYY-MM-DD HH:MM:SS'.  '' means never expire.
+	 * @param $newname The new name of the user
+	 * @return 0 success
+	 * @return -1 transaction error
+	 * @return -2 set user attributes error
+	 * @return -3 rename error
+	 */
+	function setRenameUser($username, $password, $createdb, $createuser, $expiry, $newname) {
+		$status = $this->beginTransaction();
+		if ($status != 0) return -1;
+
+		if ($username != $newname){
+			$status = $this->renameUser($username, $newname);
+			if ($status != 0) {
+				$this->rollbackTransaction();
+				return -3;
+			}
+			$username = $newname;
+		}
+
+		$status = $this->setUser($username, $password, $createdb, $createuser, $expiry);
+		if ($status != 0) {
+			$this->rollbackTransaction();
+			return -2;
+		}
+
+		return $this->endTransaction();
+	}
+
+	/**
+	 * Removes a user
+	 * @param $username The username of the user to drop
+	 * @return 0 success
+	 */
+	function dropUser($username) {
+		$this->fieldClean($username);
+
+		$sql = "DROP USER \"{$username}\"";
+
+		return $this->execute($sql);
+	}
+
+	/**
+	 * Determines whether or not a user is a super user
+	 * @param $username The username of the user
+	 * @return True if is a super user, false otherwise
+	 */
+	function isSuperUser($username = '') {
+		$this->clean($username);
+
+		if (empty($usename)) {
+			$val = pg_parameter_status($this->conn->_connectionID, 'is_superuser');
+			if ($val !== false) return $val == 'on';
+		}
+
+		$sql = "SELECT usesuper FROM pg_user WHERE usename='{$username}'";
+
+		$usesuper = $this->selectField($sql, 'usesuper');
+		if ($usesuper == -1) return false;
+		else return $usesuper == 't';
+	}
+
+	/**
+	 * Changes a role's password
+	 * @param $rolename The role name
+	 * @param $password The new password
+	 * @return 0 success
+	 */
+	function changePassword($rolename, $password) {
+		$enc = $this->_encryptPassword($rolename, $password);
+		$this->fieldClean($rolename);
+		$this->clean($enc);
+
+		$sql = "ALTER ROLE \"{$rolename}\" WITH ENCRYPTED PASSWORD '{$enc}'";
+
+		return $this->execute($sql);
+	}
+
+	/**
+	 * Adds a group member
+	 * @param $groname The name of the group
+	 * @param $user The name of the user to add to the group
+	 * @return 0 success
+	 */
+	function addGroupMember($groname, $user) {
+		$this->fieldClean($groname);
+		$this->fieldClean($user);
+
+		$sql = "ALTER GROUP \"{$groname}\" ADD USER \"{$user}\"";
+
+		return $this->execute($sql);
+	}
+
+	/**
+	 * Returns all role names which the role belongs to
+	 * @param $rolename The role name
+	 * @return All role names
+	 */
+	function getMemberOf($rolename) {
+		$this->clean($rolename);
+
+		$sql = "
+			SELECT rolname FROM pg_catalog.pg_roles R, pg_auth_members M
+			WHERE R.oid=M.roleid
+				AND member IN (
+					SELECT oid FROM pg_catalog.pg_roles
+					WHERE rolname='{$rolename}')
+			ORDER BY rolname";
+
+		return $this->selectSet($sql);
+	}
+
+	/**
+	 * Returns all role names that are members of a role
+	 * @param $rolename The role name
+	 * @param $admin (optional) Find only admin members
+	 * @return All role names
+	 */
+	function getMembers($rolename, $admin = 'f') {
+		$this->clean($rolename);
+
+		$sql = "
+			SELECT rolname FROM pg_catalog.pg_roles R, pg_auth_members M
+			WHERE R.oid=M.member AND admin_option='{$admin}'
+				AND roleid IN (SELECT oid FROM pg_catalog.pg_roles
+					WHERE rolname='{$rolename}')
+			ORDER BY rolname";
+
+		return $this->selectSet($sql);
+	}
+
+	/**
+	 * Removes a group member
+	 * @param $groname The name of the group
+	 * @param $user The name of the user to remove from the group
+	 * @return 0 success
+	 */
+	function dropGroupMember($groname, $user) {
+		$this->fieldClean($groname);
+		$this->fieldClean($user);
+
+		$sql = "ALTER GROUP \"{$groname}\" DROP USER \"{$user}\"";
+
+		return $this->execute($sql);
+	}
+
+	/**
+	 * Return users in a specific group
+	 * @param $groname The name of the group
+	 * @return All users in the group
+	 */
+	function getGroup($groname) {
+		$this->clean($groname);
+
+		$sql = "
+			SELECT s.usename FROM pg_catalog.pg_user s, pg_catalog.pg_group g
+			WHERE g.groname='{$groname}' AND s.usesysid = ANY (g.grolist)
+			ORDER BY s.usename";
+
+		return $this->selectSet($sql);
+	}
+
+	/**
+	 * Returns all groups in the database cluser
+	 * @return All groups
+	 */
+	function getGroups() {
+		$sql = "SELECT groname FROM pg_group ORDER BY groname";
+
+		return $this->selectSet($sql);
+	}
+
+	/**
+	 * Creates a new group
+	 * @param $groname The name of the group
+	 * @param $users An array of users to add to the group
+	 * @return 0 success
+	 */
+	function createGroup($groname, $users) {
+		$this->fieldClean($groname);
+
+		$sql = "CREATE GROUP \"{$groname}\"";
+
+		if (is_array($users) && sizeof($users) > 0) {
+			$this->fieldArrayClean($users);
+			$sql .= ' WITH USER "' . join('", "', $users) . '"';
+		}
+
+		return $this->execute($sql);
+	}
+
+	/**
+	 * Removes a group
+	 * @param $groname The name of the group to drop
+	 * @return 0 success
+	 */
+	function dropGroup($groname) {
+		$this->fieldClean($groname);
+
+		$sql = "DROP GROUP \"{$groname}\"";
+
+		return $this->execute($sql);
+	}
+
+	/**
+	 * Internal function used for parsing ACLs
+	 * @param $acl The ACL to parse (of type aclitem[])
+	 * @return Privileges array
+	 */
+	function _parseACL($acl) {
+		// Take off the first and last characters (the braces)
+		$acl = substr($acl, 1, strlen($acl) - 2);
+
+		// Pick out individual ACE's by carefully parsing.  This is necessary in order
+		// to cope with usernames and stuff that contain commas
+		$aces = array();
+		$i = $j = 0;
+		$in_quotes = false;
+		while ($i < strlen($acl)) {
+			// If current char is a double quote and it's not escaped, then
+			// enter quoted bit
+			$char = substr($acl, $i, 1);
+			if ($char == '"' && ($i == 0 || substr($acl, $i - 1, 1) != '\\'))
+				$in_quotes = !$in_quotes;
+			elseif ($char == ',' && !$in_quotes) {
+				// Add text so far to the array
+				$aces[] = substr($acl, $j, $i - $j);
+				$j = $i + 1;
+			}
+			$i++;
+		}
+		// Add final text to the array
+		$aces[] = substr($acl, $j);
+
+		// Create the array to be returned
+		$temp = array();
+
+		// For each ACE, generate an entry in $temp
+		foreach ($aces as $v) {
+
+			// If the ACE begins with a double quote, strip them off both ends
+			// and unescape backslashes and double quotes
+			$unquote = false;
+			if (strpos($v, '"') === 0) {
+				$v = substr($v, 1, strlen($v) - 2);
+				$v = str_replace('\\"', '"', $v);
+				$v = str_replace('\\\\', '\\', $v);
+			}
+
+			// Figure out type of ACE (public, user or group)
+			if (strpos($v, '=') === 0)
+				$atype = 'public';
+			else if ($this->hasRoles()) {
+				$atype = 'role';
+			}
+			else if (strpos($v, 'group ') === 0) {
+				$atype = 'group';
+				// Tear off 'group' prefix
+				$v = substr($v, 6);
+			}
+			else
+				$atype = 'user';
+
+			// Break on unquoted equals sign...
+			$i = 0;
+			$in_quotes = false;
+			$entity = null;
+			$chars = null;
+			while ($i < strlen($v)) {
+				// If current char is a double quote and it's not escaped, then
+				// enter quoted bit
+				$char = substr($v, $i, 1);
+				$next_char = substr($v, $i + 1, 1);
+				if ($char == '"' && ($i == 0 || $next_char != '"')) {
+					$in_quotes = !$in_quotes;
+				}
+				// Skip over escaped double quotes
+				elseif ($char == '"' && $next_char == '"') {
+					$i++;
+				}
+				elseif ($char == '=' && !$in_quotes) {
+					// Split on current equals sign
+					$entity = substr($v, 0, $i);
+					$chars = substr($v, $i + 1);
+					break;
+				}
+				$i++;
+			}
+
+			// Check for quoting on entity name, and unescape if necessary
+			if (strpos($entity, '"') === 0) {
+				$entity = substr($entity, 1, strlen($entity) - 2);
+				$entity = str_replace('""', '"', $entity);
+			}
+
+			// New row to be added to $temp
+			// (type, grantee, privileges, grantor, grant option?
+			$row = array($atype, $entity, array(), '', array());
+
+			// Loop over chars and add privs to $row
+			for ($i = 0; $i < strlen($chars); $i++) {
+				// Append to row's privs list the string representing
+				// the privilege
+				$char = substr($chars, $i, 1);
+				if ($char == '*')
+					$row[4][] = $this->privmap[substr($chars, $i - 1, 1)];
+				elseif ($char == '/') {
+					$grantor = substr($chars, $i + 1);
+					// Check for quoting
+					if (strpos($grantor, '"') === 0) {
+						$grantor = substr($grantor, 1, strlen($grantor) - 2);
+						$grantor = str_replace('""', '"', $grantor);
+					}
+					$row[3] = $grantor;
+					break;
+				}
+				else {
+					if (!isset($this->privmap[$char]))
+						return -3;
+					else
+						$row[2][] = $this->privmap[$char];
+				}
+			}
+
+			// Append row to temp
+			$temp[] = $row;
+		}
+
+		return $temp;
+	}
+
+	/**
+	 * Grabs an array of users and their privileges for an object,
+	 * given its type.
+	 * @param $object The name of the object whose privileges are to be retrieved
+	 * @param $type The type of the object (eg. database, schema, relation, function or language)
+	 * @param $table Optional, column's table if type = column
+	 * @return Privileges array
+	 * @return -1 invalid type
+	 * @return -2 object not found
+	 * @return -3 unknown privilege type
+	 */
+	function getPrivileges($object, $type, $table = null) {
+		$c_schema = $this->_schema;
+		$this->clean($c_schema);
+		$this->clean($object);
+
+		switch ($type) {
+			case 'column':
+				$this->clean($table);
+				$sql = "
+					SELECT E'{' || pg_catalog.array_to_string(attacl, E',') || E'}' as acl
+					FROM pg_catalog.pg_attribute a
+						LEFT JOIN pg_catalog.pg_class c ON (a.attrelid = c.oid)
+						LEFT JOIN pg_catalog.pg_namespace n ON (c.relnamespace=n.oid)
+					WHERE n.nspname='{$c_schema}'
+						AND c.relname='{$table}'
+						AND a.attname='{$object}'";
+				break;
+			case 'table':
+			case 'view':
+			case 'sequence':
+				$sql = "
+					SELECT relacl AS acl FROM pg_catalog.pg_class
+					WHERE relname='{$object}'
+						AND relnamespace=(SELECT oid FROM pg_catalog.pg_namespace
+							WHERE nspname='{$c_schema}')";
+				break;
+			case 'database':
+				$sql = "SELECT datacl AS acl FROM pg_catalog.pg_database WHERE datname='{$object}'";
+				break;
+			case 'function':
+				// Since we fetch functions by oid, they are already constrained to
+				// the current schema.
+				$sql = "SELECT proacl AS acl FROM pg_catalog.pg_proc WHERE oid='{$object}'";
+				break;
+			case 'language':
+				$sql = "SELECT lanacl AS acl FROM pg_catalog.pg_language WHERE lanname='{$object}'";
+				break;
+			case 'schema':
+				$sql = "SELECT nspacl AS acl FROM pg_catalog.pg_namespace WHERE nspname='{$object}'";
+				break;
+			case 'tablespace':
+				$sql = "SELECT spcacl AS acl FROM pg_catalog.pg_tablespace WHERE spcname='{$object}'";
+				break;
+			default:
+				return -1;
+		}
+
+		// Fetch the ACL for object
+		$acl = $this->selectField($sql, 'acl');
+		if ($acl == -1) return -2;
+		elseif ($acl == '' || $acl == null) return array();
+		else return $this->_parseACL($acl);
+	}
+
+	/**
+	 * Grants a privilege to a user, group or public
+	 * @param $mode 'GRANT' or 'REVOKE';
+	 * @param $type The type of object
+	 * @param $object The name of the object
+	 * @param $public True to grant to public, false otherwise
+	 * @param $usernames The array of usernames to grant privs to.
+	 * @param $groupnames The array of group names to grant privs to.
+	 * @param $privileges The array of privileges to grant (eg. ('SELECT', 'ALL PRIVILEGES', etc.) )
+	 * @param $grantoption True if has grant option, false otherwise
+	 * @param $cascade True for cascade revoke, false otherwise
+	 * @param $table the column's table if type=column
+	 * @return 0 success
+	 * @return -1 invalid type
+	 * @return -2 invalid entity
+	 * @return -3 invalid privileges
+	 * @return -4 not granting to anything
+	 * @return -4 invalid mode
+	 */
+	function setPrivileges($mode, $type, $object, $public, $usernames, $groupnames,
+		$privileges, $grantoption, $cascade, $table
+	) {
+		$f_schema = $this->_schema;
+		$this->fieldClean($f_schema);
+		$this->fieldArrayClean($usernames);
+		$this->fieldArrayClean($groupnames);
+
+		// Input checking
+		if (!is_array($privileges) || sizeof($privileges) == 0) return -3;
+		if (!is_array($usernames) || !is_array($groupnames) ||
+			(!$public && sizeof($usernames) == 0 && sizeof($groupnames) == 0)) return -4;
+		if ($mode != 'GRANT' && $mode != 'REVOKE') return -5;
+
+		$sql = $mode;
+
+		// Grant option
+		if ($this->hasGrantOption() && $mode == 'REVOKE' && $grantoption) {
+			$sql .= ' GRANT OPTION FOR';
+		}
+
+		if (in_array('ALL PRIVILEGES', $privileges)) {
+			$sql .= ' ALL PRIVILEGES';
+		}
+		else {
+			if ($type == 'column') {
+				$this->fieldClean($object);
+				$sql .= ' ' . join(" (\"{$object}\"), ", $privileges);
+			}
+			else {
+				$sql .= ' ' . join(', ', $privileges);
+			}
+		}
+
+		switch ($type) {
+			case 'column':
+				$sql .= " (\"{$object}\")";
+				$object = $table;
+			case 'table':
+			case 'view':
+			case 'sequence':
+				$this->fieldClean($object);
+				$sql .= " ON \"{$f_schema}\".\"{$object}\"";
+				break;
+			case 'database':
+				$this->fieldClean($object);
+				$sql .= " ON DATABASE \"{$object}\"";
+				break;
+			case 'function':
+				// Function comes in with $object as function OID
+				$fn = $this->getFunction($object);
+				$this->fieldClean($fn->fields['proname']);
+				$sql .= " ON FUNCTION \"{$f_schema}\".\"{$fn->fields['proname']}\"({$fn->fields['proarguments']})";
+				break;
+			case 'language':
+				$this->fieldClean($object);
+				$sql .= " ON LANGUAGE \"{$object}\"";
+				break;
+			case 'schema':
+				$this->fieldClean($object);
+				$sql .= " ON SCHEMA \"{$object}\"";
+				break;
+			case 'tablespace':
+				$this->fieldClean($object);
+				$sql .= " ON TABLESPACE \"{$object}\"";
+				break;
+			default:
+				return -1;
+		}
+
+		// Dump PUBLIC
+		$first = true;
+		$sql .= ($mode == 'GRANT') ? ' TO ' : ' FROM ';
+		if ($public) {
+			$sql .= 'PUBLIC';
+			$first = false;
+		}
+		// Dump users
+		foreach ($usernames as $v) {
+			if ($first) {
+				$sql .= "\"{$v}\"";
+				$first = false;
+			}
+			else {
+				$sql .= ", \"{$v}\"";
+			}
+		}
+		// Dump groups
+		foreach ($groupnames as $v) {
+			if ($first) {
+				$sql .= "GROUP \"{$v}\"";
+				$first = false;
+			}
+			else {
+				$sql .= ", GROUP \"{$v}\"";
+			}
+		}
+
+		// Grant option
+		if ($this->hasGrantOption() && $mode == 'GRANT' && $grantoption) {
+			$sql .= ' WITH GRANT OPTION';
+		}
+
+		// Cascade revoke
+		if ($this->hasGrantOption() && $mode == 'REVOKE' && $cascade) {
+			$sql .= ' CASCADE';
+		}
+
+		return $this->execute($sql);
+	}
+
+	/**
+	 * Helper function that computes encypted PostgreSQL passwords
+	 * @param $username The username
+	 * @param $password The password
+	 */
+	function _encryptPassword($username, $password) {
+		return 'md5' . md5($password . $username);
+		}
+
+	// Tablespace functions
+
+	/**
+	 * Retrieves information for all tablespaces
+	 * @param $all Include all tablespaces (necessary when moving objects back to the default space)
+	 * @return A recordset
+	 */
+	function getTablespaces($all = false) {
+		global $conf;
+
+		$sql = "SELECT spcname, pg_catalog.pg_get_userbyid(spcowner) AS spcowner, pg_catalog.pg_tablespace_location(oid) as spclocation,
+                    (SELECT description FROM pg_catalog.pg_shdescription pd WHERE pg_tablespace.oid=pd.objoid AND pd.classoid='pg_tablespace'::regclass) AS spccomment
+					FROM pg_catalog.pg_tablespace";
+
+		if (!$conf['show_system'] && !$all) {
+			$sql .= ' WHERE spcname NOT LIKE $$pg\_%$$';
+		}
+
+		$sql .= " ORDER BY spcname";
+
+		return $this->selectSet($sql);
+	}
+
+	/**
+	 * Retrieves a tablespace's information
+	 * @return A recordset
+	 */
+	function getTablespace($spcname) {
+		$this->clean($spcname);
+
+		$sql = "SELECT spcname, pg_catalog.pg_get_userbyid(spcowner) AS spcowner, pg_catalog.pg_tablespace_location(oid) as spclocation,
+                    (SELECT description FROM pg_catalog.pg_shdescription pd WHERE pg_tablespace.oid=pd.objoid AND pd.classoid='pg_tablespace'::regclass) AS spccomment
+					FROM pg_catalog.pg_tablespace WHERE spcname='{$spcname}'";
+
+		return $this->selectSet($sql);
+	}
+
+	/**
+	 * Creates a tablespace
+	 * @param $spcname The name of the tablespace to create
+	 * @param $spcowner The owner of the tablespace. '' for current
+	 * @param $spcloc The directory in which to create the tablespace
+	 * @return 0 success
+	 */
+	function createTablespace($spcname, $spcowner, $spcloc, $comment='') {
+		$this->fieldClean($spcname);
+		$this->clean($spcloc);
+
+		$sql = "CREATE TABLESPACE \"{$spcname}\"";
+
+		if ($spcowner != '') {
+			$this->fieldClean($spcowner);
+			$sql .= " OWNER \"{$spcowner}\"";
+	}
+
+		$sql .= " LOCATION '{$spcloc}'";
+
+		$status = $this->execute($sql);
+		if ($status != 0) return -1;
+
+		if ($comment != '' && $this->hasSharedComments()) {
+			$status = $this->setComment('TABLESPACE',$spcname,'',$comment);
+			if ($status != 0) return -2;
+		}
+
+		return 0;
+	}
+
+	/**
+	 * Alters a tablespace
+	 * @param $spcname The name of the tablespace
+	 * @param $name The new name for the tablespace
+	 * @param $owner The new owner for the tablespace
+	 * @return 0 success
+	 * @return -1 transaction error
+	 * @return -2 owner error
+	 * @return -3 rename error
+	 * @return -4 comment error
+	 */
+	function alterTablespace($spcname, $name, $owner, $comment='') {
+		$this->fieldClean($spcname);
+		$this->fieldClean($name);
+		$this->fieldClean($owner);
+
+		// Begin transaction
+		$status = $this->beginTransaction();
+		if ($status != 0) return -1;
+
+		// Owner
+		$sql = "ALTER TABLESPACE \"{$spcname}\" OWNER TO \"{$owner}\"";
+		$status = $this->execute($sql);
+		if ($status != 0) {
+			$this->rollbackTransaction();
+			return -2;
+		}
+
+		// Rename (only if name has changed)
+		if ($name != $spcname) {
+			$sql = "ALTER TABLESPACE \"{$spcname}\" RENAME TO \"{$name}\"";
+			$status = $this->execute($sql);
+			if ($status != 0) {
+				$this->rollbackTransaction();
+				return -3;
+			}
+
+			$spcname = $name;
+		}
+
+		// Set comment if it has changed
+		if (trim($comment) != '' && $this->hasSharedComments()) {
+			$status = $this->setComment('TABLESPACE',$spcname,'',$comment);
+			if ($status != 0) return -4;
+		}
+
+		return $this->endTransaction();
+	}
+
+	/**
+	 * Drops a tablespace
+	 * @param $spcname The name of the domain to drop
+	 * @return 0 success
+	 */
+	function dropTablespace($spcname) {
+		$this->fieldClean($spcname);
+
+		$sql = "DROP TABLESPACE \"{$spcname}\"";
+
+		return $this->execute($sql);
+		}
+
+	// Administration functions
+
+	/**
+	 * Analyze a database
+	 * @param $table (optional) The table to analyze
+	 */
+	function analyzeDB($table = '') {
+		if ($table != '') {
+			$f_schema = $this->_schema;
+			$this->fieldClean($f_schema);
+			$this->fieldClean($table);
+
+			$sql = "ANALYZE \"{$f_schema}\".\"{$table}\"";
+		}
+		else
+			$sql = "ANALYZE";
+
+		return $this->execute($sql);
+	}
+
+	/**
+	 * Vacuums a database
+	 * @param $table The table to vacuum
+ 	 * @param $analyze If true, also does analyze
+	 * @param $full If true, selects "full" vacuum
+	 * @param $freeze If true, selects aggressive "freezing" of tuples
+	 */
+	function vacuumDB($table = '', $analyze = false, $full = false, $freeze = false) {
+
+		$sql = "VACUUM";
+		if ($full) $sql .= " FULL";
+		if ($freeze) $sql .= " FREEZE";
+		if ($analyze) $sql .= " ANALYZE";
+		if ($table != '') {
+			$f_schema = $this->_schema;
+			$this->fieldClean($f_schema);
+			$this->fieldClean($table);
+			$sql .= " \"{$f_schema}\".\"{$table}\"";
+		}
+
+		return $this->execute($sql);
+	}
+
+	/**
+	 * Returns all autovacuum global configuration
+	 * @return associative array array( param => value, ...)
+	 */
+	function getAutovacuum() {
+
+		$_defaults = $this->selectSet("SELECT name, setting
+			FROM pg_catalog.pg_settings
+			WHERE
+				name = 'autovacuum'
+				OR name = 'autovacuum_vacuum_threshold'
+				OR name = 'autovacuum_vacuum_scale_factor'
+				OR name = 'autovacuum_analyze_threshold'
+				OR name = 'autovacuum_analyze_scale_factor'
+				OR name = 'autovacuum_vacuum_cost_delay'
+				OR name = 'autovacuum_vacuum_cost_limit'
+				OR name = 'vacuum_freeze_min_age'
+				OR name = 'autovacuum_freeze_max_age'
+			"
+		);
+
+		$ret = array();
+		while (!$_defaults->EOF) {
+			$ret[$_defaults->fields['name']] = $_defaults->fields['setting'];
+			$_defaults->moveNext();
+		}
+
+		return $ret;
+	}
+
+	/**
+	 * Returns all available autovacuum per table information.
+	 * @return A recordset
+	 */
+	function saveAutovacuum($table, $vacenabled, $vacthreshold, $vacscalefactor, $anathresold,
+		$anascalefactor, $vaccostdelay, $vaccostlimit)
+	{
+		$f_schema = $this->_schema;
+		$this->fieldClean($f_schema);
+		$this->fieldClean($table);
+
+		$sql = "ALTER TABLE \"{$f_schema}\".\"{$table}\" SET (";
+
+		if (!empty($vacenabled)) {
+			$this->clean($vacenabled);
+			$params[] = "autovacuum_enabled='{$vacenabled}'";
+		}
+		if (!empty($vacthreshold)) {
+			$this->clean($vacthreshold);
+			$params[] = "autovacuum_vacuum_threshold='{$vacthreshold}'";
+		}
+		if (!empty($vacscalefactor)) {
+			$this->clean($vacscalefactor);
+			$params[] = "autovacuum_vacuum_scale_factor='{$vacscalefactor}'";
+		}
+		if (!empty($anathresold)) {
+			$this->clean($anathresold);
+			$params[] = "autovacuum_analyze_threshold='{$anathresold}'";
+		}
+		if (!empty($anascalefactor)) {
+			$this->clean($anascalefactor);
+			$params[] = "autovacuum_analyze_scale_factor='{$anascalefactor}'";
+		}
+		if (!empty($vaccostdelay)) {
+			$this->clean($vaccostdelay);
+			$params[] = "autovacuum_vacuum_cost_delay='{$vaccostdelay}'";
+		}
+		if (!empty($vaccostlimit)) {
+			$this->clean($vaccostlimit);
+			$params[] = "autovacuum_vacuum_cost_limit='{$vaccostlimit}'";
+		}
+
+		$sql = $sql . implode(',', $params) . ');';
+
+		return $this->execute($sql);
+	}
+
+	function dropAutovacuum($table) {
+		$f_schema = $this->_schema;
+		$this->fieldClean($f_schema);
+		$this->fieldClean($table);
+
+		return $this->execute("
+			ALTER TABLE \"{$f_schema}\".\"{$table}\" RESET (autovacuum_enabled, autovacuum_vacuum_threshold,
+				autovacuum_vacuum_scale_factor, autovacuum_analyze_threshold, autovacuum_analyze_scale_factor,
+				autovacuum_vacuum_cost_delay, autovacuum_vacuum_cost_limit
+			);"
+		);
+	}
+
+	/**
+	 * Returns all available process information.
+	 * @param $database (optional) Find only connections to specified database
+	 * @return A recordset
+	 */
+	function getProcesses($database = null) {
+		if ($database === null)
+			$sql = "SELECT datname, usename, pid, query, query_start
+				FROM pg_catalog.pg_stat_activity
+				ORDER BY datname, usename, pid";
+		else {
+			$this->clean($database);
+			$sql = "SELECT datname, usename, pid, query, query_start
+				FROM pg_catalog.pg_stat_activity
+				WHERE datname='{$database}'
+				ORDER BY usename, pid";
+		}
+
+		return $this->selectSet($sql);
+	}
+
+	/**
+	 * Returns table locks information in the current database
+	 * @return A recordset
+	 */
+
+	function getLocks() {
+		global $conf;
+
+		if (!$conf['show_system'])
+			$where = 'AND pn.nspname NOT LIKE $$pg\_%$$';
+		else
+			$where = "AND nspname !~ '^pg_t(emp_[0-9]+|oast)$'";
+
+		$sql = "
+			SELECT
+				pn.nspname, pc.relname AS tablename, pl.pid, pl.mode, pl.granted, pl.virtualtransaction,
+				(select transactionid from pg_catalog.pg_locks l2 where l2.locktype='transactionid'
+					and l2.mode='ExclusiveLock' and l2.virtualtransaction=pl.virtualtransaction) as transaction
+			FROM
+				pg_catalog.pg_locks pl,
+				pg_catalog.pg_class pc,
+				pg_catalog.pg_namespace pn
+			WHERE
+				pl.relation = pc.oid AND pc.relnamespace=pn.oid
+			{$where}
+			ORDER BY pid,nspname,tablename";
+
+		return $this->selectSet($sql);
+	}
+
+	/**
+	 * Sends a cancel or kill command to a process
+	 * @param $pid The ID of the backend process
+	 * @param $signal 'CANCEL'
+	 * @return 0 success
+	 * @return -1 invalid signal type
+	 */
+	function sendSignal($pid, $signal) {
+		// Clean
+		$pid = (int)$pid;
+
+		if ($signal == 'CANCEL')
+			$sql = "SELECT pg_catalog.pg_cancel_backend({$pid}) AS val";
+		elseif ($signal == 'KILL')
+			$sql = "SELECT pg_catalog.pg_terminate_backend({$pid}) AS val";
+		else
+			return -1;
+
+
+		// Execute the query
+		$val = $this->selectField($sql, 'val');
+
+		if ($val === 'f') return -1;
+		elseif ($val === 't') return 0;
+		else return -1;
+	}
+
+	// Misc functions
+
+	/**
+	 * Sets the comment for an object in the database
+	 * @pre All parameters must already be cleaned
+	 * @param $obj_type One of 'TABLE' | 'COLUMN' | 'VIEW' | 'SCHEMA' | 'SEQUENCE' | 'TYPE' | 'FUNCTION' | 'AGGREGATE'
+	 * @param $obj_name The name of the object for which to attach a comment.
+	 * @param $table Name of table that $obj_name belongs to.  Ignored unless $obj_type is 'TABLE' or 'COLUMN'.
+	 * @param $comment The comment to add.
+	 * @return 0 success
+	 */
+	function setComment($obj_type, $obj_name, $table, $comment, $basetype = NULL) {
+		$sql = "COMMENT ON {$obj_type} " ;
+		$f_schema = $this->_schema;
+		$this->fieldClean($f_schema);
+		$this->clean($comment);  // Passing in an already cleaned comment will lead to double escaped data
+                                         // So, while counter-intuitive, it is important to not clean comments before
+                                         // calling setComment. We will clean it here instead.
+/*
+		$this->fieldClean($table);
+		$this->fieldClean($obj_name);
+*/
+
+		switch ($obj_type) {
+			case 'TABLE':
+				$sql .= "\"{$f_schema}\".\"{$table}\" IS ";
+				break;
+			case 'COLUMN':
+				$sql .= "\"{$f_schema}\".\"{$table}\".\"{$obj_name}\" IS ";
+				break;
+			case 'SEQUENCE':
+			case 'VIEW':
+			case 'TEXT SEARCH CONFIGURATION':
+			case 'TEXT SEARCH DICTIONARY':
+			case 'TEXT SEARCH TEMPLATE':
+			case 'TEXT SEARCH PARSER':
+			case 'TYPE':
+				$sql .= "\"{$f_schema}\".";
+			case 'DATABASE':
+			case 'ROLE':
+			case 'SCHEMA':
+			case 'TABLESPACE':
+				$sql .= "\"{$obj_name}\" IS ";
+				break;
+			case 'FUNCTION':
+				$sql .= "\"{$f_schema}\".{$obj_name} IS ";
+				break;
+			case 'AGGREGATE':
+				$sql .= "\"{$f_schema}\".\"{$obj_name}\" (\"{$basetype}\") IS ";
+				break;
+			default:
+				// Unknown object type
+			return -1;
+		}
+
+		if ($comment != '')
+			$sql .= "'{$comment}';";
+		else
+			$sql .= 'NULL;';
+
+		return $this->execute($sql);
+
+	}
+
+	/**
+	 * A private helper method for executeScript that advances the
+	 * character by 1.  In psql this is careful to take into account
+	 * multibyte languages, but we don't at the moment, so this function
+	 * is someone redundant, since it will always advance by 1
+	 * @param &$i The current character position in the line
+	 * @param &$prevlen Length of previous character (ie. 1)
+	 * @param &$thislen Length of current character (ie. 1)
+	 */
+	private
+	function advance_1(&$i, &$prevlen, &$thislen) {
+		$prevlen = $thislen;
+		$i += $thislen;
+		$thislen = 1;
+	}
+
+	/**
+	 * Private helper method to detect a valid $foo$ quote delimiter at
+	 * the start of the parameter dquote
+	 * @return True if valid, false otherwise
+	 */
+	private
+	function valid_dolquote($dquote) {
+		// XXX: support multibyte
+		return (preg_match('/^[$][$]/', $dquote) || preg_match('/^[$][_[:alpha:]][_[:alnum:]]*[$]/', $dquote));
+	}
+
+	/**
+	 * Executes an SQL script as a series of SQL statements.  Returns
+	 * the result of the final step.  This is a very complicated lexer
+	 * based on the REL7_4_STABLE src/bin/psql/mainloop.c lexer in
+	 * the PostgreSQL source code.
+	 * XXX: It does not handle multibyte languages properly.
+	 * @param $name Entry in $_FILES to use
+	 * @param $callback (optional) Callback function to call with each query,
+	                               its result and line number.
+	 * @return True for general success, false on any failure.
+	 */
+	function executeScript($name, $callback = null) {
+		global $data;
+
+		// This whole function isn't very encapsulated, but hey...
+		$conn = $data->conn->_connectionID;
+		if (!is_uploaded_file($_FILES[$name]['tmp_name'])) return false;
+
+		$fd = fopen($_FILES[$name]['tmp_name'], 'r');
+		if (!$fd) return false;
+
+		// Build up each SQL statement, they can be multiline
+		$query_buf = null;
+		$query_start = 0;
+		$in_quote = 0;
+		$in_xcomment = 0;
+		$bslash_count = 0;
+		$dol_quote = null;
+		$paren_level = 0;
+		$len = 0;
+		$i = 0;
+		$prevlen = 0;
+		$thislen = 0;
+		$lineno = 0;
+
+		// Loop over each line in the file
+		while (!feof($fd)) {
+			$line = fgets($fd);
+			$lineno++;
+
+			// Nothing left on line? Then ignore...
+			if (trim($line) == '') continue;
+
+		    $len = strlen($line);
+		    $query_start = 0;
+
+    		/*
+    		 * Parse line, looking for command separators.
+    		 *
+    		 * The current character is at line[i], the prior character at line[i
+    		 * - prevlen], the next character at line[i + thislen].
+    		 */
+    		$prevlen = 0;
+    		$thislen = ($len > 0) ? 1 : 0;
+
+    		for ($i = 0; $i < $len; $this->advance_1($i, $prevlen, $thislen)) {
+
+    			/* was the previous character a backslash? */
+    			if ($i > 0 && substr($line, $i - $prevlen, 1) == '\\')
+    				$bslash_count++;
+    			else
+    				$bslash_count = 0;
+
+    			/*
+    			 * It is important to place the in_* test routines before the
+    			 * in_* detection routines. i.e. we have to test if we are in
+    			 * a quote before testing for comments.
+    			 */
+
+    			/* in quote? */
+    			if ($in_quote !== 0)
+    			{
+    				/*
+    				 * end of quote if matching non-backslashed character.
+    				 * backslashes don't count for double quotes, though.
+    				 */
+    				if (substr($line, $i, 1) == $in_quote &&
+    					($bslash_count % 2 == 0 || $in_quote == '"'))
+    					$in_quote = 0;
+    			}
+
+				/* in or end of $foo$ type quote? */
+				else if ($dol_quote) {
+					if (strncmp(substr($line, $i), $dol_quote, strlen($dol_quote)) == 0) {
+						$this->advance_1($i, $prevlen, $thislen);
+						while(substr($line, $i, 1) != '$')
+							$this->advance_1($i, $prevlen, $thislen);
+						$dol_quote = null;
+					}
+				}
+
+    			/* start of extended comment? */
+    			else if (substr($line, $i, 2) == '/*')
+    			{
+    				$in_xcomment++;
+    				if ($in_xcomment == 1)
+    					$this->advance_1($i, $prevlen, $thislen);
+    			}
+
+    			/* in or end of extended comment? */
+    			else if ($in_xcomment)
+    			{
+    				if (substr($line, $i, 2) == '*/' && !--$in_xcomment)
+    					$this->advance_1($i, $prevlen, $thislen);
+    			}
+
+    			/* start of quote? */
+    			else if (substr($line, $i, 1) == '\'' || substr($line, $i, 1) == '"') {
+    				$in_quote = substr($line, $i, 1);
+    		    }
+
+				/*
+				 * start of $foo$ type quote?
+				 */
+				else if (!$dol_quote && $this->valid_dolquote(substr($line, $i))) {
+					$dol_end = strpos(substr($line, $i + 1), '$');
+					$dol_quote = substr($line, $i, $dol_end + 1);
+					$this->advance_1($i, $prevlen, $thislen);
+					while (substr($line, $i, 1) != '$') {
+						$this->advance_1($i, $prevlen, $thislen);
+					}
+
+				}
+
+    			/* single-line comment? truncate line */
+    			else if (substr($line, $i, 2) == '--')
+    			{
+    			    $line = substr($line, 0, $i); /* remove comment */
+    				break;
+    			}
+
+    			/* count nested parentheses */
+				else if (substr($line, $i, 1) == '(') {
+    				$paren_level++;
+				}
+
+    			else if (substr($line, $i, 1) == ')' && $paren_level > 0) {
+    				$paren_level--;
+    			}
+
+    			/* semicolon? then send query */
+    			else if (substr($line, $i, 1) == ';' && !$bslash_count && !$paren_level)
+    			{
+    			    $subline = substr(substr($line, 0, $i), $query_start);
+    				/* is there anything else on the line? */
+    				if (strspn($subline, " \t\n\r") != strlen($subline))
+    				{
+    					/*
+    					 * insert a cosmetic newline, if this is not the first
+    					 * line in the buffer
+						 */
+    					if (strlen($query_buf) > 0)
+    					    $query_buf .= "\n";
+    					/* append the line to the query buffer */
+    					$query_buf .= $subline;
+    					$query_buf .= ';';
+
+						// Execute the query. PHP cannot execute
+            			// empty queries, unlike libpq
+						$res = @pg_query($conn, $query_buf);
+
+						// Call the callback function for display
+						if ($callback !== null) $callback($query_buf, $res, $lineno);
+            			// Check for COPY request
+            			if (pg_result_status($res) == 4) { // 4 == PGSQL_COPY_FROM
+            				while (!feof($fd)) {
+            					$copy = fgets($fd, 32768);
+            					$lineno++;
+            					pg_put_line($conn, $copy);
+            					if ($copy == "\\.\n" || $copy == "\\.\r\n") {
+            						pg_end_copy($conn);
+            						break;
+            					}
+            				}
+            			}
+            		}
+
+					$query_buf = null;
+					$query_start = $i + $thislen;
+    			}
+
+				/*
+				 * keyword or identifier?
+				 * We grab the whole string so that we don't
+				 * mistakenly see $foo$ inside an identifier as the start
+				 * of a dollar quote.
+				 */
+				// XXX: multibyte here
+				else if (preg_match('/^[_[:alpha:]]$/', substr($line, $i, 1))) {
+					$sub = substr($line, $i, $thislen);
+					while (preg_match('/^[\$_A-Za-z0-9]$/', $sub)) {
+						/* keep going while we still have identifier chars */
+						$this->advance_1($i, $prevlen, $thislen);
+						$sub = substr($line, $i, $thislen);
+					}
+					// Since we're now over the next character to be examined, it is necessary
+					// to move back one space.
+					$i-=$prevlen;
+				}
+    	    } // end for
+
+    		/* Put the rest of the line in the query buffer. */
+    		$subline = substr($line, $query_start);
+    		if ($in_quote || $dol_quote || strspn($subline, " \t\n\r") != strlen($subline))
+    		{
+    			if (strlen($query_buf) > 0)
+    			    $query_buf .= "\n";
+    			$query_buf .= $subline;
+    		}
+
+    		$line = null;
+
+    	} // end while
+
+    	/*
+    	 * Process query at the end of file without a semicolon, so long as
+    	 * it's non-empty.
+		 */
+    	if (strlen($query_buf) > 0 && strspn($query_buf, " \t\n\r") != strlen($query_buf))
+    	{
+			// Execute the query
+			$res = @pg_query($conn, $query_buf);
+
+			// Call the callback function for display
+			if ($callback !== null) $callback($query_buf, $res, $lineno);
+			// Check for COPY request
+			if (pg_result_status($res) == 4) { // 4 == PGSQL_COPY_FROM
+				while (!feof($fd)) {
+					$copy = fgets($fd, 32768);
+					$lineno++;
+					pg_put_line($conn, $copy);
+					if ($copy == "\\.\n" || $copy == "\\.\r\n") {
+						pg_end_copy($conn);
+						break;
+					}
+				}
+			}
+		}
+
+		fclose($fd);
+
+		return true;
+	}
+
+	/**
+	 * Generates the SQL for the 'select' function
+	 * @param $table The table from which to select
+	 * @param $show An array of columns to show.  Empty array means all columns.
+	 * @param $values An array mapping columns to values
+	 * @param $ops An array of the operators to use
+	 * @param $orderby (optional) An array of column numbers or names (one based)
+	 *        mapped to sort direction (asc or desc or '' or null) to order by
+	 * @return The SQL query
+	 */
+	function getSelectSQL($table, $show, $values, $ops, $orderby = array()) {
+		$this->fieldArrayClean($show);
+
+		// If an empty array is passed in, then show all columns
+		if (sizeof($show) == 0) {
+			if ($this->hasObjectID($table))
+				$sql = "SELECT \"{$this->id}\", * FROM ";
+			else
+				$sql = "SELECT * FROM ";
+		}
+		else {
+			// Add oid column automatically to results for editing purposes
+			if (!in_array($this->id, $show) && $this->hasObjectID($table))
+				$sql = "SELECT \"{$this->id}\", \"";
+			else
+				$sql = "SELECT \"";
+
+			$sql .= join('","', $show) . "\" FROM ";
+		}
+
+		$this->fieldClean($table);
+
+		if (isset($_REQUEST['schema'])) {
+			$f_schema = $_REQUEST['schema'];
+			$this->fieldClean($f_schema);
+			$sql .= "\"{$f_schema}\".";
+		}
+		$sql .= "\"{$table}\"";
+
+		// If we have values specified, add them to the WHERE clause
+		$first = true;
+		if (is_array($values) && sizeof($values) > 0) {
+			foreach ($values as $k => $v) {
+				if ($v != '' || $this->selectOps[$ops[$k]] == 'p') {
+					$this->fieldClean($k);
+					if ($first) {
+						$sql .= " WHERE ";
+						$first = false;
+					} else {
+						$sql .= " AND ";
+					}
+					// Different query format depending on operator type
+					switch ($this->selectOps[$ops[$k]]) {
+						case 'i':
+							// Only clean the field for the inline case
+							// this is because (x), subqueries need to
+							// to allow 'a','b' as input.
+							$this->clean($v);
+							$sql .= "\"{$k}\" {$ops[$k]} '{$v}'";
+							break;
+						case 'p':
+							$sql .= "\"{$k}\" {$ops[$k]}";
+							break;
+						case 'x':
+							$sql .= "\"{$k}\" {$ops[$k]} ({$v})";
+							break;
+						case 't':
+							$sql .= "\"{$k}\" {$ops[$k]}('{$v}')";
+							break;
+						default:
+							// Shouldn't happen
+					}
+				}
+			}
+		}
+
+		// ORDER BY
+		if (is_array($orderby) && sizeof($orderby) > 0) {
+			$sql .= " ORDER BY ";
+			$first = true;
+			foreach ($orderby as $k => $v) {
+				if ($first) $first = false;
+				else $sql .= ', ';
+				if (preg_match('/^[0-9]+$/', $k)) {
+					$sql .= $k;
+				}
+				else {
+					$this->fieldClean($k);
+					$sql .= '"' . $k . '"';
+				}
+				if (strtoupper($v) == 'DESC') $sql .= " DESC";
+			}
+		}
+
+		return $sql;
+	}
+
+	/**
+	 * Returns a recordset of all columns in a query.  Supports paging.
+	 * @param $type Either 'QUERY' if it is an SQL query, or 'TABLE' if it is a table identifier,
+	 *              or 'SELECT" if it's a select query
+	 * @param $table The base table of the query.  NULL for no table.
+	 * @param $query The query that is being executed.  NULL for no query.
+	 * @param $sortkey The column number to sort by, or '' or null for no sorting
+	 * @param $sortdir The direction in which to sort the specified column ('asc' or 'desc')
+	 * @param $page The page of the relation to retrieve
+	 * @param $page_size The number of rows per page
+	 * @param &$max_pages (return-by-ref) The max number of pages in the relation
+	 * @return A recordset on success
+	 * @return -1 transaction error
+	 * @return -2 counting error
+	 * @return -3 page or page_size invalid
+	 * @return -4 unknown type
+	 * @return -5 failed setting transaction read only
+	 */
+	function browseQuery($type, $table, $query, $sortkey, $sortdir, $page, $page_size, &$max_pages) {
+		// Check that we're not going to divide by zero
+		if (!is_numeric($page_size) || $page_size != (int)$page_size || $page_size <= 0) return -3;
+
+		// If $type is TABLE, then generate the query
+		switch ($type) {
+			case 'TABLE':
+				if (preg_match('/^[0-9]+$/', $sortkey) && $sortkey > 0) $orderby = array($sortkey => $sortdir);
+				else $orderby = array();
+				$query = $this->getSelectSQL($table, array(), array(), array(), $orderby);
+				break;
+			case 'QUERY':
+			case 'SELECT':
+				// Trim query
+				$query = trim($query);
+				// Trim off trailing semi-colon if there is one
+				if (substr($query, strlen($query) - 1, 1) == ';')
+					$query = substr($query, 0, strlen($query) - 1);
+				break;
+			default:
+				return -4;
+		}
+
+		// Generate count query
+		$count = "SELECT COUNT(*) AS total FROM ($query) AS sub";
+
+		// Open a transaction
+		$status = $this->beginTransaction();
+		if ($status != 0) return -1;
+
+		// If backend supports read only queries, then specify read only mode
+		// to avoid side effects from repeating queries that do writes.
+		if ($this->hasReadOnlyQueries()) {
+			$status = $this->execute("SET TRANSACTION READ ONLY");
+			if ($status != 0) {
+				$this->rollbackTransaction();
+				return -5;
+					}
+				}
+
+
+		// Count the number of rows
+		$total = $this->browseQueryCount($query, $count);
+		if ($total < 0) {
+			$this->rollbackTransaction();
+			return -2;
+    			}
+
+		// Calculate max pages
+		$max_pages = ceil($total / $page_size);
+
+		// Check that page is less than or equal to max pages
+		if (!is_numeric($page) || $page != (int)$page || $page > $max_pages || $page < 1) {
+			$this->rollbackTransaction();
+			return -3;
+					}
+
+		// Set fetch mode to NUM so that duplicate field names are properly returned
+		// for non-table queries.  Since the SELECT feature only allows selecting one
+		// table, duplicate fields shouldn't appear.
+		if ($type == 'QUERY') $this->conn->setFetchMode(ADODB_FETCH_NUM);
+
+		// Figure out ORDER BY.  Sort key is always the column number (based from one)
+		// of the column to order by.  Only need to do this for non-TABLE queries
+		if ($type != 'TABLE' && preg_match('/^[0-9]+$/', $sortkey) && $sortkey > 0) {
+			$orderby = " ORDER BY {$sortkey}";
+			// Add sort order
+			if ($sortdir == 'desc')
+				$orderby .= ' DESC';
+			else
+				$orderby .= ' ASC';
+				}
+		else $orderby = '';
+
+		// Actually retrieve the rows, with offset and limit
+		$rs = $this->selectSet("SELECT * FROM ({$query}) AS sub {$orderby} LIMIT {$page_size} OFFSET " . ($page - 1) * $page_size);
+		$status = $this->endTransaction();
+		if ($status != 0) {
+			$this->rollbackTransaction();
+			return -1;
+    			}
+
+		return $rs;
+    			}
+
+	/**
+	 * Finds the number of rows that would be returned by a
+	 * query.
+	 * @param $query The SQL query
+	 * @param $count The count query
+	 * @return The count of rows
+	 * @return -1 error
+	 */
+	function browseQueryCount($query, $count) {
+		return $this->selectField($count, 'total');
+    }
+
+	/**
+	 * Returns a recordset of all columns in a table
+	 * @param $table The name of a table
+	 * @param $key The associative array holding the key to retrieve
+	 * @return A recordset
+    					 */
+	function browseRow($table, $key) {
+		$f_schema = $this->_schema;
+		$this->fieldClean($f_schema);
+		$this->fieldClean($table);
+
+		$sql = "SELECT * FROM \"{$f_schema}\".\"{$table}\"";
+		if (is_array($key) && sizeof($key) > 0) {
+			$sql .= " WHERE true";
+			foreach ($key as $k => $v) {
+				$this->fieldClean($k);
+				$this->clean($v);
+				$sql .= " AND \"{$k}\"='{$v}'";
+           	}
+   		}
+
+		return $this->selectSet($sql);
+   	}
+
+	// Type conversion routines
+
+	/**
+	 * Change the value of a parameter to 't' or 'f' depending on whether it evaluates to true or false
+	 * @param $parameter the parameter
+				 */
+	function dbBool(&$parameter) {
+		if ($parameter) $parameter = 't';
+		else $parameter = 'f';
+
+		return $parameter;
+    }
+
+	/**
+	 * Change a parameter from 't' or 'f' to a boolean, (others evaluate to false)
+	 * @param $parameter the parameter
+	 */
+	function phpBool($parameter) {
+		$parameter = ($parameter == 't');
+		return $parameter;
+	}
+
+	// interfaces Statistics collector functions
+
+	/**
+	 * Fetches statistics for a database
+	 * @param $database The database to fetch stats for
+	 * @return A recordset
+    	 */
+	function getStatsDatabase($database) {
+		$this->clean($database);
+
+		$sql = "SELECT * FROM pg_stat_database WHERE datname='{$database}'";
+
+		return $this->selectSet($sql);
+	}
+
+	/**
+	 * Fetches tuple statistics for a table
+	 * @param $table The table to fetch stats for
+	 * @return A recordset
+	 */
+	function getStatsTableTuples($table) {
+		$c_schema = $this->_schema;
+		$this->clean($c_schema);
+		$this->clean($table);
+
+		$sql = "SELECT * FROM pg_stat_all_tables
+			WHERE schemaname='{$c_schema}' AND relname='{$table}'";
+
+		return $this->selectSet($sql);
+	}
+
+	/**
+	 * Fetches I/0 statistics for a table
+	 * @param $table The table to fetch stats for
+	 * @return A recordset
+	 */
+	function getStatsTableIO($table) {
+		$c_schema = $this->_schema;
+		$this->clean($c_schema);
+		$this->clean($table);
+
+		$sql = "SELECT * FROM pg_statio_all_tables
+			WHERE schemaname='{$c_schema}' AND relname='{$table}'";
+
+		return $this->selectSet($sql);
+	}
+
+	/**
+	 * Fetches tuple statistics for all indexes on a table
+	 * @param $table The table to fetch index stats for
+	 * @return A recordset
+	 */
+	function getStatsIndexTuples($table) {
+		$c_schema = $this->_schema;
+		$this->clean($c_schema);
+		$this->clean($table);
+
+		$sql = "SELECT * FROM pg_stat_all_indexes
+			WHERE schemaname='{$c_schema}' AND relname='{$table}' ORDER BY indexrelname";
+
+		return $this->selectSet($sql);
+    }
+
+	/**
+	 * Fetches I/0 statistics for all indexes on a table
+	 * @param $table The table to fetch index stats for
+	 * @return A recordset
+	 */
+	function getStatsIndexIO($table) {
+		$c_schema = $this->_schema;
+		$this->clean($c_schema);
+		$this->clean($table);
+
+		$sql = "SELECT * FROM pg_statio_all_indexes
+			WHERE schemaname='{$c_schema}' AND relname='{$table}'
+			ORDER BY indexrelname";
+
+		return $this->selectSet($sql);
+	}
+
+	// Capabilities
+
+	function hasAggregateSortOp() { return true; }
+	function hasAlterAggregate() { return true; }
+	function hasAlterColumnType() { return true; }
+	function hasAlterDatabaseOwner() { return true; }
+	function hasAlterDatabaseRename() { return true; }
+	function hasAlterSchema() { return true; }
+	function hasAlterSchemaOwner() { return true; }
+	function hasAlterSequenceSchema() { return true; }
+	function hasAlterSequenceStart() { return true; }
+	function hasAlterTableSchema() { return true; }
+	function hasAutovacuum() { return true; }
+	function hasCreateTableLike() { return true; }
+	function hasCreateTableLikeWithConstraints() { return true; }
+	function hasCreateTableLikeWithIndexes() { return true; }
+	function hasCreateFieldWithConstraints() { return true; }
+	function hasDisableTriggers() { return true; }
+	function hasAlterDomains() { return true; }
+	function hasDomainConstraints() { return true; }
+	function hasEnumTypes() { return true; }
+	function hasFTS() { return true; }
+	function hasFunctionAlterOwner() { return true; }
+	function hasFunctionAlterSchema() { return true; }
+	function hasFunctionCosting() { return true; }
+	function hasFunctionGUC() { return true; }
+	function hasGrantOption() { return true; }
+	function hasNamedParams() { return true; }
+	function hasPrepare() { return true; }
+	function hasPreparedXacts() { return true; }
+	function hasReadOnlyQueries() { return true; }
+	function hasRecluster() { return true; }
+	function hasRoles() { return true; }
+	function hasServerAdminFuncs() { return true; }
+	function hasSharedComments() { return true; }
+	function hasQueryCancel() { return true; }
+	function hasTablespaces() { return true; }
+	function hasUserRename() { return true; }
+	function hasVirtualTransactionId() { return true; }
+	function hasAlterDatabase() { return $this->hasAlterDatabaseRename(); }
+	function hasDatabaseCollation() { return true; }
+	function hasMagicTypes() { return true; }
+	function hasQueryKill() { return true; }
+	function hasConcurrentIndexBuild() { return true; }
+	function hasForceReindex() { return false; }
+	function hasByteaHexDefault() { return true; }
+
+}
+?>

@@ -298,9 +298,6 @@
 		// Include application functions
 		include_once('./libraries/lib.inc.php');
 
-		if ( !isset($_REQUEST['query']) or empty($_REQUEST['query']) )
-			$_REQUEST['query'] = $_SESSION['sqlquery'];
-
 		$misc->printHeader($lang['strexport']);
 		$misc->printBody();
 		$misc->printTrail(isset($_REQUEST['subject']) ? $_REQUEST['subject'] : 'database');
@@ -340,6 +337,6 @@
 		echo "</form>\n";
 		
 		$misc->printFooter();
-	}
+	}	
 
 ?>

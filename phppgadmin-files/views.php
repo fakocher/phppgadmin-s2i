@@ -22,7 +22,7 @@
 
 		if ($confirm) {
 			$misc->printTrail('view');
-			$misc->printTabs('view','select');
+			$misc->printTitle($lang['strselect'], 'pg.sql.select');
 			$misc->printMsg($msg);
 
 			$attrs = $data->getTableAttributes($_REQUEST['view']);
@@ -78,7 +78,7 @@
 					$attrs->moveNext();
 				}
 				// Select all checkbox
-				echo "<tr><td colspan=\"5\"><input type=\"checkbox\" id=\"selectall\" name=\"selectall\" accesskey=\"a\" onclick=\"javascript:selectAll()\" /><label for=\"selectall\">{$lang['strselectallfields']}</label></td></tr>";
+				echo "<tr><td colspan=\"5\"><input type=\"checkbox\" id=\"selectall\" name=\"selectall\" onclick=\"javascript:selectAll()\" /><label for=\"selectall\">{$lang['strselectallfields']}</label></td></tr>";
 				echo "</table>\n";
 			}
 			else echo "<p>{$lang['strinvalidparam']}</p>\n";
@@ -87,7 +87,7 @@
 			echo "<input type=\"hidden\" name=\"view\" value=\"", htmlspecialchars($_REQUEST['view']), "\" />\n";
 			echo "<input type=\"hidden\" name=\"subject\" value=\"view\" />\n";
 			echo $misc->form;
-			echo "<input type=\"submit\" name=\"select\" accesskey=\"r\" value=\"{$lang['strselect']}\" />\n";
+			echo "<input type=\"submit\" name=\"select\" value=\"{$lang['strselect']}\" />\n";
 			echo "<input type=\"submit\" name=\"cancel\" value=\"{$lang['strcancel']}\" /></p>\n";
 			echo "</form>\n";
 		}
@@ -161,7 +161,7 @@
 		}
 		else {
 			if (is_array($_POST['view'])) {
-				$msg = '';
+				$msg='';
 				$status = $data->beginTransaction();
 				if ($status == 0) {
 					foreach($_POST['view'] as $s) {
@@ -323,7 +323,7 @@
 			echo "</table>\n";
 			echo "<p><input type=\"hidden\" name=\"action\" value=\"save_create_wiz\" />\n";
 			
-			foreach ($arrSelTables as $curTable) {
+			foreach ($arrSelTables AS $curTable) {
 				echo "<input type=\"hidden\" name=\"formTables[]\" value=\"" . htmlspecialchars(serialize($curTable) ) . "\" />\n";
 			}
 			
@@ -379,11 +379,7 @@
 		global $lang;
 		
 		if (!isset($_REQUEST['formView'])) $_REQUEST['formView'] = '';
-		if (!isset($_REQUEST['formDefinition'])) {
-			if (isset($_SESSION['sqlquery']))
-				$_REQUEST['formDefinition'] = $_SESSION['sqlquery'];
-			else $_REQUEST['formDefinition'] = 'SELECT ';
-		}
+		if (!isset($_REQUEST['formDefinition'])) $_REQUEST['formDefinition'] = 'SELECT ';
 		if (!isset($_REQUEST['formComment'])) $_REQUEST['formComment'] = '';
 		
 		$misc->printTrail('schema');
@@ -445,7 +441,7 @@
 			if (! empty($_POST['dblFldMeth']) )
 				$tmpHsh = array();
 
-			foreach ($_POST['formFields'] as $curField) {
+			foreach ($_POST['formFields'] AS $curField) {
 				$arrTmp = unserialize($curField);
 				$data->fieldArrayClean($arrTmp);
 				if (! empty($_POST['dblFldMeth']) ) { // doublon control
@@ -470,7 +466,7 @@
 			if (is_array($_POST['formLink']) ) {
 				// Filter out invalid/blank entries for our links
 				$arrLinks = array();
-				foreach ($_POST['formLink'] as $curLink) {
+				foreach ($_POST['formLink'] AS $curLink) {
 					if (strlen($curLink['leftlink']) && strlen($curLink['rightlink']) && strlen($curLink['operator'])) {
 						$arrLinks[] = $curLink;
 					}
@@ -484,7 +480,7 @@
 				if ($count > 0) {
 					$j = 0;
 					while ($j < $count) {					
-						foreach ($arrLinks as $curLink) {
+						foreach ($arrLinks AS $curLink) {
 							
 							$arrLeftLink = unserialize($curLink['leftlink']);
 							$arrRightLink = unserialize($curLink['rightlink']);
@@ -516,7 +512,7 @@
 			//if linkfields has no length then either _POST['formLink'] was not set, or there were no join conditions 
 			//just select from all seleted tables - a cartesian join do a
 			if (!strlen($linkFields) ) {
-				foreach ($_POST['formTables'] as $curTable) {
+				foreach ($_POST['formTables'] AS $curTable) {
 					$arrTmp = unserialize($curTable);
 					$data->fieldArrayClean($arrTmp);
 					$linkFields .= strlen($linkFields) ? ", \"{$arrTmp['schemaname']}\".\"{$arrTmp['tablename']}\"" : "\"{$arrTmp['schemaname']}\".\"{$arrTmp['tablename']}\"";
@@ -525,7 +521,7 @@
 			
 			$addConditions = '';
 			if (is_array($_POST['formCondition']) ) {
-				foreach ($_POST['formCondition'] as $curCondition) {
+				foreach ($_POST['formCondition'] AS $curCondition) {
 					if (strlen($curCondition['field']) && strlen($curCondition['txt']) ) {
 						$arrTmp = unserialize($curCondition['field']);
 						$data->fieldArrayClean($arrTmp);

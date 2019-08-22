@@ -9,7 +9,7 @@
 		/**
 		 *Constructor
 		 */
-		function GUI () {}
+		function __construct () {}
 		 
 		/**
 		 * Prints a combox box
@@ -30,7 +30,7 @@
 			if ($bBlankEntry)
 				$htmlOut .= "<option value=\"\"></option>\n";				
 			
-			foreach ($arrOptions as $curKey => $curVal) {
+			foreach ($arrOptions AS $curKey => $curVal) {
 				$curVal = htmlspecialchars($curVal);
 				$curKey = htmlspecialchars($curKey);
 				if ($curVal == $szDefault) {			
