@@ -10,8 +10,14 @@ https://github.com/sclorg/s2i-php-container
 
 ## Environment variables
 ```
-# Specify the PostgreSQL server hostname in your Openshift project.
-PHP_PG_ADMIN_HOSTNAME=postgres
+# MENDATORY
+# pecify the PostgreSQL server hostname in your Openshift project.
+HOST=postgresql
+
+# OPTIONNAL
+# Activate extra security, like denying login without password or with postgres user.
+# Default: true
+EXTRA_LOGIN_SECURITY=true
 ```
 
 ## References

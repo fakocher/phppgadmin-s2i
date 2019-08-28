@@ -15,7 +15,7 @@
 
 	// Hostname or IP address for server.  Use '' for UNIX domain socket.
 	// use 'localhost' for TCP/IP connection on this computer
-	$conf['servers'][0]['host'] = getenv('PHP_PG_ADMIN_HOSTNAME') ?: '';
+	$conf['servers'][0]['host'] = getenv('HOST') ?: '';
 
 	// Database port on server (5432 is the PostgreSQL default)
 	$conf['servers'][0]['port'] = 5432;
@@ -90,7 +90,7 @@
 	// will be denied. Only set this false once you have read the FAQ and
 	// understand how to change PostgreSQL's pg_hba.conf to enable
 	// passworded local connections.
-	$conf['extra_login_security'] = true;
+	$conf['extra_login_security'] = getenv('EXTRA_LOGIN_SECURITY') == 'false' ? false : true;
 
 	// Only show owned databases?
 	// Note: This will simply hide other databases in the list - this does
